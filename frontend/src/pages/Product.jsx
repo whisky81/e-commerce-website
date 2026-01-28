@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import useShopContext from "../hooks/useShopContext";
 import { assets } from '../assets/assets';
+import RelatedProducts from '../components/RelatedProducts';
 
 const Product = () => {
   const { productId } = useParams();
-  const { products, currency } = useShopContext();
+  const { products, currency, addToCart } = useShopContext();
   const [productData, setProductData] = useState(null)
   const [image, setImage] = useState('');
   const [size, setSize] = useState('');
@@ -62,7 +63,7 @@ const Product = () => {
               ))}
             </div>
           </div>
-          <button className='bg-black text-white px-8 py-3 text-sm active:bg-gray-700'>Add To Cart</button>
+          <button onClick={()=>addToCart(productData._id, size)} className='bg-black text-white px-8 py-3 text-sm active:bg-gray-700'>Add To Cart</button>
           <hr  className='mt-8 sm:w-4/5'/>
 
           <div className='text-sm text-gray-500 mt-5 flex flex-col gap-1'>
@@ -73,7 +74,19 @@ const Product = () => {
         </div>
       </div>
       {/* description & reviews */}
-      
+      <div className='mt-20'>
+        <div className='flex'>
+            <p className='border px-5 py-3 text-sm'>Description</p>
+            <p className='border px-5 py-3 text-sm'>Reviews (81)</p>
+        </div>
+        <div className='flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500'>
+              <p>abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc</p>
+              <p>abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc</p>
+        </div>
+      </div>
+
+      {/* related products */}
+      <RelatedProducts category={productData.category}  subCategory={productData.subCategory}/>
     </div>
   ) : <div className='opacity-0'></div>
 }
