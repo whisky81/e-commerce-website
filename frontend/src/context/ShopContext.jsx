@@ -1,16 +1,20 @@
 import { createContext, useEffect, useState } from "react";
-import { products } from "../assets/assets";
+// import { products } from "../assets/assets";
 import { toast } from 'react-toastify';
 import { useNavigate } from "react-router-dom"
 export const ShopContext = createContext();
+import axios from "axios"
 
 const ShopContextProvider = (props) => {
     const currency = '$';
     const deliveryFee = 10;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [search, setSearch] = useState('');
     const [showSearch, setShowSearch] = useState(false);
     const [cartItems, setCartItems] = useState({});
     const navigate = useNavigate();
+    const [products, setProducts] = useState([])
+    const [token, setToken] = useState('')
     const addToCart = async (itemId, size) => {
         if (size === "") {
             toast.error('Select product size');
@@ -70,6 +74,30 @@ const ShopContextProvider = (props) => {
         }
         return total;
     }
+    const  fetchProductsData = async () => {
+        try {
+            const response = await axios.get(
+                backendUrl + '/api/product/list'
+            )
+            // console.log(response.data)
+            if (response.data.success) {
+                setProducts(response.data.products)
+            } else {
+                toast.error(response.data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
+    }    
+    useEffect(() => {
+        fetchProductsData()
+    }, [])
+    useEffect(()=>{
+        if (!token && localStorage.getItem('token')) {
+            setToken(localStorage.getItem('token'))
+        }
+    },[])
+
     const value = {
         products,
         currency,
@@ -78,7 +106,10 @@ const ShopContextProvider = (props) => {
         showSearch, setShowSearch,
         cartItems, addToCart,
         cartCount, updateQuantity, cartAmount,
-        navigate
+        navigate,
+        backendUrl,
+        token, setToken,
+        setCartItems
     };
     return (
         <ShopContext.Provider value={value}>
