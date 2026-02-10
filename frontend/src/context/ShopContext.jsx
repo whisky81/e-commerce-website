@@ -32,12 +32,71 @@ const ShopContextProvider = (props) => {
             cartData[itemId][size] = 1 
         }
         setCartItems(cartData);
+
+        if (token) {
+            try {
+                await axios.post(
+                    backendUrl + '/api/cart/add',
+                    {
+                        itemId, size
+                    },
+                    {
+                        headers: {
+                            token
+                        }
+                    }
+                )
+            } catch (error) {
+                toast.error(error.message)
+            }
+        }
     }
 
     const updateQuantity = async (itemId, size, quantity) => {
         let cartData = structuredClone(cartItems);
         cartData[itemId][size] = quantity;
         setCartItems(cartData);
+
+        if (token) {
+            try {
+                await axios.post(
+                    backendUrl + '/api/cart/update',
+                    {itemId, size, quantity},
+                    {
+                        headers: {
+                            token
+                        }
+                    }
+                )
+            } catch (error) {
+                toast.error(error.message)
+            }
+        }
+    }
+
+    const getUserCart = async (token) => {
+        if (!token) {
+            // get an error here :)
+            return;
+        }
+        try {
+            
+            const response = await axios.post(
+                backendUrl + '/api/cart/get',
+                {},
+                {
+                    headers: {token}
+                }
+            )        
+            console.log(response.data)
+            if (response.data.success) {
+                setCartItems(response.data.cartData)
+            } else {
+                toast.error(response.data.message)
+            }   
+        } catch (error) {
+            toast.error(error.message)
+        }
     }
 
     const cartCount = () => {
@@ -95,8 +154,9 @@ const ShopContextProvider = (props) => {
     useEffect(()=>{
         if (!token && localStorage.getItem('token')) {
             setToken(localStorage.getItem('token'))
+            getUserCart(localStorage.getItem('token'))
         }
-    },[])
+    },[token])
 
     const value = {
         products,
