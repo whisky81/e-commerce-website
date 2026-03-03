@@ -1,0 +1,33 @@
+sse
+    GET /api/v2/products - products list 
+    GET /api/v2/products/:id - product detail (?)
+    GET /api/v2/orders - orders list 
+    GET /api/v2/orders/my - my orders 
+    GET /api/v2/products/:id/reviews
+frontend
+    review
+    add new addr 
+    hiển thị số lượng sản phẩm đã bán của 1 product 
+    chia từng pages cho collection??
+quản lý stock 
+thêm chức nưng thanh toán khác (eg. momo, vnpay, ...)
+delivery fee theo địa chỉ (gg map)
+thông báo và xác thực email khi người dùng đk (không thể thao tác nếu chưa xác thực)
+quảng cáo bằng email 
+bổ sung model Brand (?)
+---
+hướng dẫn chạy
+    git clone ...
+    trong thư mục backend
+        npm i 
+        thêm file           .env 
+        chạy file:          npm run v2
+    trong thư mục admin
+        npm i
+        thêm file           .env 
+        chạy file:          npm run dev
+    trong thu mục frontend
+        npm i 
+        thêm file           .env
+        chạy file:          npm run dev
+

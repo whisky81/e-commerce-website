@@ -14,6 +14,8 @@ import SearchBar from './components/SearchBar.jsx'
 import { ToastContainer } from 'react-toastify';
 import Login from './pages/Login.jsx'
 import Verify from './pages/Verify.jsx'
+import PlaceOrderByProductId from './pages/PlaceOrderByProductId.jsx'
+import User from './pages/User.jsx'
 const App = () => {
   return (
     <div className='px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]'>
@@ -32,6 +34,9 @@ const App = () => {
         <Route path='/orders' element={<Orders />} />
         <Route path="/login" element={<Login />}/>
         <Route path="/verify" element={<Verify />}/>
+        <Route path="/place-order/:productId" element={<PlaceOrderByProductId />}/> {/*TODO*/}
+        <Route path="/user" element={<User/>}/>
+        
       </Routes>
       <Footer />
     </div>

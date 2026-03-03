@@ -8,25 +8,26 @@ const Footer = () => {
                 <div className='sm:col-span-2 lg:col-span-1'>
                     <img src={assets.logo} alt="logo image" className='mb-5 w-32' />
                     <p className='w-full lg:w-2/3 text-gray-600 leading-relaxed'>
-                        abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc abc
+                        Chúng tôi cung cấp các sản phẩm điện tử chính hãng với chất lượng đảm bảo và giá cả cạnh tranh, 
+                        mang đến trải nghiệm mua sắm an toàn và tiện lợi cho khách hàng.
                     </p>
                 </div>
 
                 <div>
-                    <p className='text-xl font-medium mb-5'>Company</p>
+                    <p className='text-xl font-medium mb-5'>Công ty</p>
                     <ul className='flex flex-col gap-2 text-gray-600'>
-                        <li className='cursor-pointer hover:text-gray-800 transition-colors'>Home</li>
-                        <li className='cursor-pointer hover:text-gray-800 transition-colors'>About us</li>
-                        <li className='cursor-pointer hover:text-gray-800 transition-colors'>Delivery</li>
-                        <li className='cursor-pointer hover:text-gray-800 transition-colors'>Privacy policy</li>
+                        <li className='cursor-pointer hover:text-gray-800 transition-colors'>Trang chủ</li>
+                        <li className='cursor-pointer hover:text-gray-800 transition-colors'>Giới thiệu</li>
+                        <li className='cursor-pointer hover:text-gray-800 transition-colors'>Giao hàng</li>
+                        <li className='cursor-pointer hover:text-gray-800 transition-colors'>Chính sách bảo mật</li>
                     </ul>
                 </div>
 
                 <div>
-                    <p className='text-xl font-medium mb-5'>Get In Touch</p>
+                    <p className='text-xl font-medium mb-5'>Liên hệ</p>
                     <ul className='flex flex-col gap-2 text-gray-600'>
                         <li>0123456789</li>
-                        <li>whisky@abc.com</li>
+                        <li>abcwhisky@gmail.com</li>
                     </ul>
                 </div>
             </div>
