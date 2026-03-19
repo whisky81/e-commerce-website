@@ -18,6 +18,9 @@ bổ sung model Brand (?)
 models tham khảo: https://github.com/manhblue04/E-Commerce
 admin chỉnh sửa  + bổ sung ảnh hero
 danh sách yêu thích  
+thống kê phía admin
+giảm giá
+sau khi review create thif đưa vào response để append 
 ---
 hướng dẫn chạy
     git clone ...
