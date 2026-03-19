@@ -5,6 +5,7 @@ sse
     GET /api/v2/orders/my - my orders 
     GET /api/v2/products/:id/reviews
 frontend
+    chỉnh lại giao diện quá xấu chữ quá nhỏ, không nền chèn tiếng anh tiếng việt xen kẽ 
     review
     add new addr 
     hiển thị số lượng sản phẩm đã bán của 1 product 
@@ -36,4 +37,6 @@ hướng dẫn chạy
         npm i 
         thêm file           .env
         chạy file:          npm run dev
+
+lưu ý: tìm sửa xóa những sản phẩm nhiều tiếng anh
 
