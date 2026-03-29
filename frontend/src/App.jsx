@@ -17,29 +17,43 @@ import Verify from './pages/Verify.jsx'
 import PlaceOrderByProductId from './pages/PlaceOrderByProductId.jsx'
 import User from './pages/User.jsx'
 import Favorites from './pages/Favorites.jsx'
+
 const App = () => {
   return (
-    <div className='px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw] min-h-screen bg-gradient-to-b from-white via-slate-50/50 to-white'>
-      <ToastContainer />
+    <div className='min-h-screen bg-gradient-to-b from-white via-blue-50/20 to-white'>
+      <ToastContainer 
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <NavBar />
       <SearchBar />
-      <Routes>
-        <Route path='/' element={<Home />} />
-        <Route path='/collection' element={<Collection />} />
-        <Route path='/about' element={<About />} />
-        <Route path='/contact' element={<Contact />} />
+      <main className='px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]'>
+        <Routes>
+          <Route path='/' element={<Home />} />
+          <Route path='/collection' element={<Collection />} />
+          <Route path='/about' element={<About />} />
+          <Route path='/contact' element={<Contact />} />
 
-        <Route path='/product/:productId' element={<Product />} />
-        <Route path='/cart' element={<Cart />} />
-        <Route path='/place-order' element={<PlaceOrder />} />
-        <Route path='/orders' element={<Orders />} />
-        <Route path="/login" element={<Login />}/>
-        <Route path="/verify" element={<Verify />}/>
-        <Route path="/place-order/:productId" element={<PlaceOrderByProductId />}/> {/*TODO*/}
-        <Route path="/user" element={<User/>}/>
-        <Route path="/favorites" element={<Favorites />} />
-        
-      </Routes>
+          <Route path='/product/:productId' element={<Product />} />
+          <Route path='/cart' element={<Cart />} />
+          <Route path='/place-order' element={<PlaceOrder />} />
+          <Route path='/orders' element={<Orders />} />
+          <Route path="/login" element={<Login />}/>
+          <Route path="/verify" element={<Verify />}/>
+          <Route path="/place-order/:productId" element={<PlaceOrderByProductId />}/> 
+          <Route path="/user" element={<User/>}/>
+          <Route path="/favorites" element={<Favorites />} />
+          
+        </Routes>
+      </main>
       <Footer />
     </div>
   )
