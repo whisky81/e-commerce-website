@@ -59,6 +59,19 @@ const productSchema = new mongoose.Schema(
         note: {
             type: String,
             default: ""
+        },
+
+        stock: {
+            type: Number,
+            required: true,
+            default: 10000,
+            min: 0
+        },
+
+        soldCount: {
+            type: Number,
+            default: 0,
+            min: 0
         }
     },
     {

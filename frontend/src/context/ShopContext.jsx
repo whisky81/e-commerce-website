@@ -6,7 +6,7 @@ export const ShopContext = createContext();
 import axios from "axios"
 
 const ShopContextProvider = (props) => {
-    const currency = '$';
+    const currency = '₫';
     const deliveryFee = 20000;
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [search, setSearch] = useState('');
@@ -16,6 +16,7 @@ const ShopContextProvider = (props) => {
     const [products, setProducts] = useState([])
     const [token, setToken] = useState('')
     const [filters, setFilters] = useState({});
+    const [favoriteIds, setFavoriteIds] = useState([]);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
 
@@ -29,10 +30,40 @@ const ShopContextProvider = (props) => {
                 throw new Error(response.data.message);
             }
             setUser(response.data.data);
+            setFavoriteIds(response.data.data.favoriteIds || []);
         } catch (error) {
             toast.error(error.message);
         }
     }
+
+    const toggleFavorite = async (productId) => {
+        if (!isAuthenticated) {
+            toast.info("Vui lòng đăng nhập để dùng yêu thích");
+            navigate("/login");
+            return;
+        }
+        const isFav = favoriteIds.some((id) => id === productId || id?.toString?.() === productId);
+        try {
+            if (isFav) {
+                await axios.delete(
+                    backendUrl + `/api/v2/users/favorites/${productId}`,
+                    { withCredentials: true }
+                );
+                setFavoriteIds((prev) => prev.filter((id) => id?.toString?.() !== productId?.toString?.()));
+                toast.success("Đã xóa khỏi yêu thích");
+            } else {
+                await axios.post(
+                    backendUrl + `/api/v2/users/favorites/${productId}`,
+                    {},
+                    { withCredentials: true }
+                );
+                setFavoriteIds((prev) => [...prev, productId]);
+                toast.success("Đã thêm vào yêu thích");
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || error.message);
+        }
+    };
 
     const cartHelper = async (productId, quantity) => {
         try {
@@ -161,7 +192,7 @@ const ShopContextProvider = (props) => {
     const  fetchProductsData = async () => {
         try {
             const response = await axios.get(
-                backendUrl + "/api/v2/products?limit=20",
+                backendUrl + "/api/v2/products?limit=100",
                 {
                     withCredentials: true 
                 }
@@ -187,6 +218,8 @@ const ShopContextProvider = (props) => {
         if (isAuthenticated) {
             getUserCart();
             my();
+        } else {
+            setFavoriteIds([]);
         }
     },[isAuthenticated])
 
@@ -204,7 +237,8 @@ const ShopContextProvider = (props) => {
         setCartItems,
         filters,
         isAuthenticated, setIsAuthenticated,
-        user, setUser, my
+        user, setUser, my,
+        favoriteIds, setFavoriteIds, toggleFavorite
     };
     return (
         <ShopContext.Provider value={value}>

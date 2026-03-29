@@ -5,7 +5,10 @@ import {
     profile,
     updateProfile,
     updateAddress,
-    deleteAddress
+    deleteAddress,
+    listFavorites,
+    addFavorite,
+    removeFavorite
 } from '../../controllers/v2/user.controller.js'
 
 const userRoutes = express.Router()
@@ -13,6 +16,10 @@ const userRoutes = express.Router()
 // profile
 userRoutes.get('/profile', protect, profile)
 userRoutes.put('/profile', protect, updateProfile)
+
+userRoutes.get('/favorites', protect, listFavorites)
+userRoutes.post('/favorites/:productId', protect, addFavorite)
+userRoutes.delete('/favorites/:productId', protect, removeFavorite)
 
 // addresses 
 userRoutes.post('/addresses', protect, addAddress)

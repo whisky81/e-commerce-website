@@ -6,8 +6,8 @@ import { Link } from 'react-router-dom'
 
 const List = () => {
   const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)          
-  const [deletingId, setDeletingId] = useState(null)   
+  const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState(null)
 
   const fetchList = async () => {
     try {
@@ -56,58 +56,59 @@ const List = () => {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-lg font-semibold animate-pulse">
-        Loading products...
+      <div className="p-6 text-center text-lg font-semibold animate-pulse text-gray-500">
+        Đang tải danh sách…
       </div>
     )
   }
 
   return (
-    <div>
-      <p className='mb-2'>Danh sách sản phẩm</p>
+    <div className="max-w-6xl">
+      <p className="mb-4 text-xl font-semibold text-gray-800">Danh sách sản phẩm</p>
 
-      <div className='flex flex-col gap-2'>
-        <div className='hidden md:grid grid-cols-[1fr_3fr_1fr_1fr_1fr_1fr] items-center py-1 px-2 border bg-gray-100 text-sm'>
-          <b>Ảnh</b>
-          <b>Tên Sản Phẩm</b>
-          <b>Loại</b>
-          <b>Thương Hiệu</b>
-          <b>Giá</b>
-          <b className='text-center'>Xóa</b>
+      <div className="flex flex-col gap-2">
+        <div className="hidden md:grid grid-cols-[72px_minmax(0,2fr)_1fr_1fr_1fr_1fr_1fr_52px] items-center gap-2 py-2 px-3 rounded-t-xl bg-slate-100 text-sm font-semibold text-slate-700">
+          <span>Ảnh</span>
+          <span>Tên</span>
+          <span>Loại</span>
+          <span>Thương hiệu</span>
+          <span>Giá</span>
+          <span>Tồn</span>
+          <span>Đã bán</span>
+          <span className="text-center">Xóa</span>
         </div>
 
         {products.map((item) => (
           <div
             key={item._id}
-            className='grid grid-cols-[1fr_3fr_1fr] md:grid-cols-[1fr_3fr_1fr_1fr_1fr_1fr] items-center gap-2 py-1 px-2 border text-sm'
+            className="grid grid-cols-2 md:grid-cols-[72px_minmax(0,2fr)_1fr_1fr_1fr_1fr_1fr_52px] gap-2 py-3 px-3 border border-gray-100 rounded-xl bg-white shadow-sm items-center text-sm text-gray-700"
           >
-            <img className='w-12' src={item.images?.[0]} alt="" />
-
-            <p>
-              <Link to={`/products/${item._id}`}>
+            <img className="w-14 h-14 object-cover rounded-lg hidden md:block" src={item.images?.[0]} alt="" />
+            <p className="md:col-auto col-span-2 font-medium">
+              <Link className="hover:text-blue-600" to={`/products/${item._id}`}>
                 {item.name}
               </Link>
             </p>
-
-            <p>{item.category}</p>
-            <p>{item.brand}</p>
-
-            <p>
+            <p className="hidden md:block">{item.category}</p>
+            <p className="hidden md:block">{item.brand}</p>
+            <p className="hidden md:block">
               {new Intl.NumberFormat("vi-VN", {
                 style: "currency",
                 currency: "VND"
               }).format(item.price)}
             </p>
-
+            <p className="hidden md:block">{item.stock ?? "—"}</p>
+            <p className="hidden md:block">{item.soldCount ?? 0}</p>
             <button
+              type="button"
               onClick={() => removeProduct(item._id)}
               disabled={deletingId === item._id}
-              className={`text-right md:text-center text-lg
-                ${deletingId === item._id 
-                  ? "text-gray-400 cursor-not-allowed" 
-                  : "text-red-500 cursor-pointer"}`}
+              className={`text-center md:text-right text-lg justify-self-end
+                ${deletingId === item._id
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-red-500 cursor-pointer hover:text-red-700"}`}
             >
-              {deletingId === item._id ? "..." : "X"}
+              {deletingId === item._id ? "…" : "✕"}
             </button>
           </div>
         ))}

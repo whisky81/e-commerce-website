@@ -58,61 +58,87 @@ export const placeOrder = async (req, res) => {
                 message: "Cart is empty"
             })
         }
+
         let itemsPrice = 0;
-        orderItems = await Promise.all(
-            orderItems.map(async (item) => {
-                const product = await Product.findById(item.product);
-                if (!product) {
-                    return res.status(404).json({
-                        success: false,
-                        message: 'Product not found'
-                    })
-                }
-                itemsPrice += product.price * item.quantity;
-                return {
-                    product: item.product,
-                    quantity: item.quantity,
-                    name: product.name,
-                    image: product.images[0],
-                    price: product.price,
-                }
-            })
-        )
+        const lineItems = [];
+        for (const item of orderItems) {
+            const product = await Product.findById(item.product);
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Không tìm thấy sản phẩm"
+                })
+            }
+            if (product.stock < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Không đủ hàng: ${product.name}`
+                })
+            }
+            itemsPrice += product.price * item.quantity;
+            lineItems.push({
+                product: item.product,
+                quantity: item.quantity,
+                name: product.name,
+                image: product.images[0],
+                price: product.price,
+            });
+        }
+
         const session = await mongoose.startSession();
+        let newOrderId;
         try {
-            session.startTransaction();
-            const newOrder = await Order.create({
-                user: userId,
-                items: orderItems,
-                shippingAddress: {
-                    fullName: address.fullName,
-                    phone: address.phone,
-                    street: address.street,
-                    ward: address.ward,
-                    district: address.district,
-                    province: address.province
-                },
-                itemsPrice,
-                shippingPrice,
-                totalPrice: itemsPrice + shippingPrice,
-            })
-            ordersInCartFlag && (await User.findByIdAndUpdate(
-                userId,
-                { cart: [] }));
-            await session.commitTransaction();
-            res.status(201).json({
-                success: true,
-                message: "Order Placed Successfully",
-                data: {
-                    orderId: newOrder._id,
+            await session.withTransaction(async () => {
+                const [created] = await Order.create([{
+                    user: userId,
+                    items: lineItems,
+                    shippingAddress: {
+                        fullName: address.fullName,
+                        phone: address.phone,
+                        street: address.street,
+                        ward: address.ward,
+                        district: address.district,
+                        province: address.province
+                    },
+                    itemsPrice,
+                    shippingPrice,
+                    totalPrice: itemsPrice + shippingPrice,
+                }], { session });
+                newOrderId = created._id;
+
+                for (const item of orderItems) {
+                    const updated = await Product.findOneAndUpdate(
+                        { _id: item.product, stock: { $gte: item.quantity } },
+                        { $inc: { stock: -item.quantity, soldCount: item.quantity } },
+                        { session, new: true }
+                    );
+                    if (!updated) {
+                        throw new Error("INSUFFICIENT_STOCK");
+                    }
                 }
-            })
-        } catch (error) {
-            await session.abortTransaction();
-            throw error;
+                if (ordersInCartFlag) {
+                    await User.findByIdAndUpdate(userId, { cart: [] }, { session });
+                }
+            });
+        } catch (err) {
+            if (err.message === "INSUFFICIENT_STOCK") {
+                return res.status(400).json({
+                    success: false,
+                    message: "Không đủ hàng trong kho"
+                })
+            }
+            throw err;
         } finally {
             session.endSession();
         }
+
+        res.status(201).json({
+            success: true,
+            message: "Đặt hàng thành công",
+            data: {
+                orderId: newOrderId,
+            }
+        })
     } catch (error) {
         return res.status(500).json({
             success: false,
@@ -170,28 +196,33 @@ export const placeOrderStripe = async (req, res) => {
             })
         }
         let itemsPrice = 0;
-        orderItems = await Promise.all(
-            orderItems.map(async (item) => {
-                const product = await Product.findById(item.product);
-                if (!product) {
-                    return res.status(404).json({
-                        success: false,
-                        message: 'Product not found'
-                    })
-                }
-                itemsPrice += product.price * item.quantity;
-                return {
-                    product: item.product,
-                    quantity: item.quantity,
-                    name: product.name,
-                    image: product.images[0],
-                    price: product.price,
-                }
-            })
-        )
+        const stripeLineItems = [];
+        for (const item of orderItems) {
+            const product = await Product.findById(item.product);
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Không tìm thấy sản phẩm"
+                })
+            }
+            if (product.stock < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Không đủ hàng: ${product.name}`
+                })
+            }
+            itemsPrice += product.price * item.quantity;
+            stripeLineItems.push({
+                product: item.product,
+                quantity: item.quantity,
+                name: product.name,
+                image: product.images[0],
+                price: product.price,
+            });
+        }
         const orderData = {
             user: userId,
-            items: orderItems,
+            items: stripeLineItems,
             shippingAddress: {
                 fullName: address.fullName,
                 phone: address.phone,
@@ -206,7 +237,7 @@ export const placeOrderStripe = async (req, res) => {
             paymentMethod: "stripe"
         }
         const newOrder = await Order.create(orderData);
-        const line_items = orderItems.map((item) => ({
+        const line_items = stripeLineItems.map((item) => ({
             price_data: {
                 currency: currency,
                 product_data: {
@@ -316,27 +347,69 @@ export const updateStatus = async (req, res) => {
 export const verifyStripe = async (req, res) => {
     try {
         const { orderId, success } = req.body;
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid order ID"
+            })
+        }
         if (success === "true") {
-            await Order.findByIdAndUpdate(
-                orderId,
-                {
-                    isPaid: true,
-                    paidAt: Date.now(),
-                    status: "confirmed"
+            let session;
+            try {
+                session = await mongoose.startSession();
+                await session.withTransaction(async () => {
+                    const order = await Order.findById(orderId).session(session);
+                    if (!order) {
+                        throw new Error("ORDER_NOT_FOUND");
+                    }
+                    if (order.user.toString() !== req.user._id.toString()) {
+                        throw new Error("FORBIDDEN_ORDER");
+                    }
+                    if (order.isPaid) {
+                        return;
+                    }
+                    for (const line of order.items) {
+                        const updated = await Product.findOneAndUpdate(
+                            { _id: line.product, stock: { $gte: line.quantity } },
+                            { $inc: { stock: -line.quantity, soldCount: line.quantity } },
+                            { session, new: true }
+                        );
+                        if (!updated) {
+                            throw new Error("INSUFFICIENT_STOCK");
+                        }
+                    }
+                    order.isPaid = true;
+                    order.paidAt = new Date();
+                    order.status = "confirmed";
+                    await order.save({ session });
+                    await User.findByIdAndUpdate(req.user._id, { cart: [] }, { session });
+                });
+            } catch (err) {
+                if (err.message === "INSUFFICIENT_STOCK") {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Không đủ hàng trong kho, không thể hoàn tất thanh toán"
+                    })
                 }
-            )
-            await User.findByIdAndUpdate(
-                req.user._id,
-                { cart: [] })
-            res.json({
+                if (err.message === "ORDER_NOT_FOUND") {
+                    return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng" })
+                }
+                if (err.message === "FORBIDDEN_ORDER") {
+                    return res.status(403).json({ success: false, message: "Không hợp lệ" })
+                }
+                throw err;
+            } finally {
+                session?.endSession();
+            }
+            return res.json({
                 success: true,
-                message: "Payment verified and order placed successfully"
+                message: "Thanh toán thành công"
             })
         } else {
             await Order.findByIdAndDelete(orderId);
             res.status(400).json({
                 success: false,
-                message: "Payment failed, order cancelled"
+                message: "Thanh toán thất bại, đơn hàng đã hủy"
             })
 
         }

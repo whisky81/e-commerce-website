@@ -245,7 +245,7 @@ const PlaceOrder = () => {
                   {method === 'stripe' && <div className='w-3 h-3 bg-blue-500 rounded-full'></div>}
                 </div>
                 <img className='h-6' src={assets.stripe_logo} alt="Stripe" />
-                <span className='font-medium text-gray-700'>Stripe</span>
+                <span className='font-medium text-gray-700'>Thẻ quốc tế (Stripe)</span>
               </div>
               <div
                 onClick={() => setMethod('cod')}

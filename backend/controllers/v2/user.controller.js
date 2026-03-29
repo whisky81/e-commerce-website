@@ -1,15 +1,19 @@
 import User from "../../models/v2/User.js"
+import Product from "../../models/v2/Product.js"
 import validator from "validator"
+import mongoose from "mongoose"
 
 export const profile = async (req, res) => {
     try {
+        const user = await User.findById(req.user._id).select("name email addresses favorites");
         res.status(200).json({
             success: true,
             data: {
-                id: req.user._id,
-                name: req.user.name,
-                email: req.user.email,
-                addresses: req.user.addresses
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                addresses: user.addresses,
+                favoriteIds: user.favorites || []
             }
         })
     } catch (error) {
@@ -197,6 +201,67 @@ export const deleteAddress = async (req, res) => {
             success: false,
             message: "Server error",
             error: error.message
+        });
+    }
+};
+
+export const listFavorites = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).populate({
+            path: "favorites",
+            select: "_id name price images category brand stock soldCount"
+        });
+        res.status(200).json({
+            success: true,
+            data: user.favorites || []
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: error.message
+        });
+    }
+};
+
+export const addFavorite = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({ success: false, message: "ID sản phẩm không hợp lệ" });
+        }
+        const exists = await Product.findById(productId);
+        if (!exists) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm" });
+        }
+        await User.findByIdAndUpdate(
+            req.user._id,
+            { $addToSet: { favorites: productId } }
+        );
+        res.status(200).json({ success: true, message: "Đã thêm vào yêu thích" });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+export const removeFavorite = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({ success: false, message: "ID sản phẩm không hợp lệ" });
+        }
+        await User.findByIdAndUpdate(
+            req.user._id,
+            { $pull: { favorites: productId } }
+        );
+        res.status(200).json({ success: true, message: "Đã xóa khỏi yêu thích" });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };

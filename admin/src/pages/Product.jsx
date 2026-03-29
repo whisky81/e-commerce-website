@@ -52,11 +52,12 @@ const Product = () => {
       const updateData = {
         name: formData.name,
         description: formData.description,
-        price: formData.price,
+        price: Number(formData.price),
         category: formData.category,
         brand: formData.brand,
         specifications: formData.specifications,
         note: formData.note,
+        stock: Number(formData.stock),
       }
 
       const response = await axios.put(
@@ -66,8 +67,15 @@ const Product = () => {
       )
 
       if (response.data.success) {
-        toast.success("Updated successfully")
-        setProduct(response.data.data.product)
+        toast.success("Cập nhật thành công")
+        const r2 = await axios.get(
+          backendUrl + `/api/v2/products/${productId}`,
+          { withCredentials: true }
+        )
+        if (r2.data.success) {
+          setProduct(r2.data.data.product)
+          setFormData(r2.data.data.product)
+        }
         setIsEdit(false)
       } else {
         toast.error(response.data.message)
@@ -87,8 +95,8 @@ const Product = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg font-semibold animate-pulse">
-          Loading product...
+        <div className="text-lg font-semibold animate-pulse text-gray-600">
+          Đang tải sản phẩm…
         </div>
       </div>
     )
@@ -168,6 +176,27 @@ const Product = () => {
             </div>
 
             <div>
+              <label className="font-semibold text-gray-600">Tồn kho</label>
+              {!isEdit ? (
+                <p>{product.stock ?? 0}</p>
+              ) : (
+                <input
+                  name="stock"
+                  type="number"
+                  min={0}
+                  value={formData.stock ?? 0}
+                  onChange={handleChange}
+                  className="mt-1 w-full border rounded-lg p-2"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="font-semibold text-gray-600">Đã bán</label>
+              <p className="text-gray-500">{product.soldCount ?? 0} (chỉ tăng khi có đơn)</p>
+            </div>
+
+            <div>
               <label className="font-semibold text-gray-600">Mô tả</label>
               {!isEdit ? (
                 <p>{product.description}</p>
@@ -236,18 +265,18 @@ const Product = () => {
           {!isEdit ? (
             <button
               onClick={() => setIsEdit(true)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Update
+              Chỉnh sửa
             </button>
           ) : (
             <>
               <button
                 onClick={handleCancel}
                 disabled={saving}
-                className="px-6 py-2 bg-gray-400 text-white rounded-lg"
+                className="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 onClick={handleUpdate}
@@ -255,7 +284,7 @@ const Product = () => {
                 className={`px-6 py-2 rounded-lg text-white 
                   ${saving ? "bg-green-400" : "bg-green-600 hover:bg-green-700"}`}
               >
-                {saving ? "Saving..." : "Save"}
+                {saving ? "Đang lưu…" : "Lưu"}
               </button>
             </>
           )}

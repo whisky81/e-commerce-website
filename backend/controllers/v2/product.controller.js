@@ -6,7 +6,7 @@ export const productsForAdminReq = async (req, res) => {
     try {
         const products = await Product
             .find({})
-            .select("_id name price images category brand createdAt")
+            .select("_id name price images category brand stock soldCount createdAt")
             .sort({ createdAt: -1 });
         res.status(200).json({
             success: true,
@@ -26,12 +26,31 @@ export const products = async (req, res) => {
         const limit = Number(req.query.limit) || 12;
         const skip = (page - 1) * limit;
 
-        const { category, minPrice, maxPrice, sort } = req.query;
+        const { category, categories, brand, brands, minPrice, maxPrice, sort, search, q } = req.query;
+        const searchTerm = (search || q || "").trim();
 
         const filter = {};
 
-        if (category) {
+        if (categories) {
+            const list = String(categories).split(",").map((c) => c.trim()).filter(Boolean);
+            if (list.length > 0) {
+                filter.category = { $in: list };
+            }
+        } else if (category) {
             filter.category = category;
+        }
+
+        if (brands) {
+            const blist = String(brands).split(",").map((b) => b.trim()).filter(Boolean);
+            if (blist.length > 0) {
+                filter.brand = { $in: blist };
+            }
+        } else if (brand) {
+            filter.brand = brand;
+        }
+
+        if (searchTerm) {
+            filter.name = { $regex: searchTerm, $options: "i" };
         }
 
         if (minPrice || maxPrice) {
@@ -45,15 +64,15 @@ export const products = async (req, res) => {
         if (sort === "-price") sortOption = { price: -1 };
 
         const products = await Product.find(filter)
-            .select("_id name price images category brand") // giảm payload 
+            .select("_id name price images category brand stock soldCount")
             .sort(sortOption)
             .skip(skip)
             .limit(limit);
 
         const total = await Product.countDocuments(filter);
 
-        const categories = await Product.distinct('category');
-        const brands = await Product.distinct('brand');
+        const _categories = await Product.distinct('category');
+        const _brands = await Product.distinct('brand');
 
         res.status(200).json({
             success: true,
@@ -63,8 +82,8 @@ export const products = async (req, res) => {
             totalPages: Math.ceil(total / limit),
             data: products,
             filters: {
-                categories: categories.sort(),
-                brands: brands.sort()
+                categories: _categories.sort(),
+                brands: _brands.sort()
             }
         });
 
@@ -127,7 +146,8 @@ export const createProduct = async (req, res) => {
             category,
             brand,
             note,
-            specifications
+            specifications,
+            stock
         } = req.body;
         specifications = typeof specifications === "string" ? JSON.parse(specifications) : specifications;
         if (!name || !price || !category || !brand) {
@@ -152,6 +172,8 @@ export const createProduct = async (req, res) => {
             })
         )
 
+        const stockNum = stock !== undefined && stock !== "" ? Number(stock) : 10000;
+
         const product = await Product.create({
             name,
             description,
@@ -160,7 +182,9 @@ export const createProduct = async (req, res) => {
             category,
             brand,
             note,
-            specifications
+            specifications,
+            stock: Number.isFinite(stockNum) ? Math.max(0, stockNum) : 10000,
+            soldCount: 0
         })
 
         res.status(201).json({
@@ -200,12 +224,30 @@ export const updateProduct = async (req, res) => {
             "category",
             "brand",
             "specifications",
-            "note"
+            "note",
+            "stock"
         ];
 
+        if (req.body.specifications !== undefined) {
+            let specs = req.body.specifications;
+            if (typeof specs === "string") {
+                try {
+                    specs = JSON.parse(specs);
+                } catch {
+                    /* keep string */
+                }
+            }
+            product.specifications = specs;
+        }
+
         fields.forEach(field => {
+            if (field === "specifications") return;
             if (req.body[field] !== undefined) {
-                product[field] = req.body[field];
+                if (field === "price" || field === "stock") {
+                    product[field] = Math.max(0, Number(req.body[field]));
+                } else {
+                    product[field] = req.body[field];
+                }
             }
         });
 

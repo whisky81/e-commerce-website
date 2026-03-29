@@ -9,7 +9,8 @@ import Review from './Review';
 
 const Product = () => {
   const { productId } = useParams();
-  const { backendUrl, addToCart } = useShopContext();
+  const { backendUrl, addToCart, toggleFavorite, favoriteIds } = useShopContext();
+  const isFavorite = favoriteIds.some((fid) => String(fid) === String(productId));
   const [productData, setProductData] = useState(null)
   const [reviews, setReviews] = useState([]);
   const [image, setImage] = useState('');
@@ -80,7 +81,19 @@ const Product = () => {
             </span>
           </div>
 
-          <h1 className='font-medium text-3xl mt-2'>{productData.name}</h1>
+          <div className='flex items-start justify-between gap-4 mt-2'>
+            <h1 className='font-medium text-3xl flex-1'>{productData.name}</h1>
+            <button
+              type='button'
+              onClick={() => toggleFavorite(productData._id)}
+              className='shrink-0 w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-rose-50 transition-colors'
+              aria-label={isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={isFavorite ? '#e11d48' : 'none'} stroke={isFavorite ? '#e11d48' : 'currentColor'} className='w-6 h-6'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' />
+              </svg>
+            </button>
+          </div>
 
           <div className='flex items-center gap-1 mt-3'>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -106,7 +119,13 @@ const Product = () => {
           <div className='text-sm text-gray-500 mt-5 flex flex-col gap-2'>
             <p className='flex items-center gap-2'>
               <span className='font-medium text-gray-700'>Tình trạng:</span>
-              <span className='text-green-600'>Còn hàng</span>
+              <span className={(productData.stock ?? 0) > 0 ? 'text-green-600' : 'text-red-600'}>
+                {(productData.stock ?? 0) > 0 ? `Còn ${productData.stock ?? 0} sản phẩm` : 'Hết hàng'}
+              </span>
+            </p>
+            <p className='flex items-center gap-2'>
+              <span className='font-medium text-gray-700'>Đã bán:</span>
+              <span>{(productData.soldCount ?? 0).toLocaleString('vi-VN')}</span>
             </p>
             <p className='flex items-center gap-2'>
               <span className='font-medium text-gray-700'>Vận chuyển:</span>

@@ -16,6 +16,7 @@ const Add = () => {
   const [category, setCategory] = useState("Default");
   const [brand, setBrand] = useState("");
   const [note, setNote] = useState("");
+  const [stock, setStock] = useState("10000");
   const [specifications, setSpecifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -52,6 +53,7 @@ const Add = () => {
         setPrice('')
         setBrand('')
         setNote('')
+        setStock('10000')
         setSpecifications([])
         setImage1(false)
         setImage2(false)
@@ -161,6 +163,19 @@ const Add = () => {
                 className='w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors'
                 type="text"
                 placeholder='Nhập thương hiệu...'
+                required
+              />
+            </div>
+
+            <div>
+              <p className='mb-2 font-medium text-gray-700'>Tồn kho</p>
+              <input
+                onChange={(e) => setStock(e.target.value)}
+                value={stock}
+                className='w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors'
+                type="number"
+                min={0}
+                placeholder='Số lượng'
                 required
               />
             </div>

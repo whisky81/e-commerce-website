@@ -16,9 +16,10 @@ import Login from './pages/Login.jsx'
 import Verify from './pages/Verify.jsx'
 import PlaceOrderByProductId from './pages/PlaceOrderByProductId.jsx'
 import User from './pages/User.jsx'
+import Favorites from './pages/Favorites.jsx'
 const App = () => {
   return (
-    <div className='px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]'>
+    <div className='px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw] min-h-screen bg-gradient-to-b from-white via-slate-50/50 to-white'>
       <ToastContainer />
       <NavBar />
       <SearchBar />
@@ -36,6 +37,7 @@ const App = () => {
         <Route path="/verify" element={<Verify />}/>
         <Route path="/place-order/:productId" element={<PlaceOrderByProductId />}/> {/*TODO*/}
         <Route path="/user" element={<User/>}/>
+        <Route path="/favorites" element={<Favorites />} />
         
       </Routes>
       <Footer />

@@ -1,6 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Prata&display=swap');
 @import "tailwindcss";
 
+@layer base {
+    html {
+        font-size: 17px;
+    }
+    @media (min-width: 640px) {
+        html {
+            font-size: 18px;
+        }
+    }
+}
 
 a.active hr {
     display: block;
