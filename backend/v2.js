@@ -1,3 +1,4 @@
+// backend/v2.js  ← thêm marketingRoutes
 import express from 'express'
 import cors from 'cors'
 import 'dotenv/config'
@@ -11,15 +12,14 @@ import cartRoutes from './routes/v2/cartRoutes.js'
 import reviewRoutes from './routes/v2/reviewRoutes.js'
 import orderRoutes from './routes/v2/orderRoutes.js'
 import adminRoutes from './routes/v2/adminRoutes.js'
-import settingRoutes from './routes/v2/settingRoutes.js'   
+import settingRoutes from './routes/v2/settingRoutes.js'
+import marketingRoutes from './routes/v2/marketingRoutes.js'   // ✅ NEW
 
-// app config
 const app = express()
 const port = process.env.PORT || 5000
 connectDB()
 connectCloudinary()
 
-// middleware
 app.use(express.json())
 app.use(cors({
     origin: ['http://localhost:5173', 'http://localhost:5174'],
@@ -28,16 +28,14 @@ app.use(cors({
 }))
 app.use(cookieParser())
 
-// api endpoints 
-app.use('/api/v2/auth', authRoutes)
-app.use('/api/v2/users', userRoutes)
-app.use('/api/v2/products', productRoutes)
-app.use('/api/v2/cart', cartRoutes)
-app.use('/api/v2/reviews', reviewRoutes)
-app.use('/api/v2/orders', orderRoutes)
-app.use('/api/v2/admin', adminRoutes)
-app.use('/api/v2/setting', settingRoutes)
+app.use('/api/v2/auth',      authRoutes)
+app.use('/api/v2/users',     userRoutes)
+app.use('/api/v2/products',  productRoutes)
+app.use('/api/v2/cart',      cartRoutes)
+app.use('/api/v2/reviews',   reviewRoutes)
+app.use('/api/v2/orders',    orderRoutes)
+app.use('/api/v2/admin',     adminRoutes)
+app.use('/api/v2/setting',   settingRoutes)
+app.use('/api/v2/marketing', marketingRoutes)   // ✅ NEW
 
-app.listen(port, () => {
-    console.log(`Local: http://localhost:${port}`)
-})
+app.listen(port, () => console.log(`Local: http://localhost:${port}`))

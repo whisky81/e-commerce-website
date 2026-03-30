@@ -1,32 +1,24 @@
+// admin/src/pages/Stats.jsx
 import axios from 'axios'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import { backendUrl } from '../App'
 
-// Simple Chart Component (no external dependency)
-const SimpleBarChart = ({ data, title }) => {
-  const maxValue = Math.max(...data.map(d => d.value));
-  return (
-    <div className='mt-4'>
-      <h3 className='font-semibold text-gray-800 mb-3'>{title}</h3>
-      <div className='space-y-2'>
-        {data.map((item, idx) => (
-          <div key={idx} className='flex items-center gap-3'>
-            <span className='text-xs text-gray-600 w-20 truncate'>{item.label}</span>
-            <div className='flex-1 bg-gray-200 rounded-full h-6 overflow-hidden'>
-              <div 
-                className='bg-gradient-to-r from-blue-500 to-blue-600 h-full flex items-center justify-end pr-2 transition-all'
-                style={{ width: `${(item.value / maxValue) * 100}%` }}
-              >
-                <span className='text-xs font-bold text-white'>{item.value}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+const fmt = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0)
+
+const StatCard = ({ label, value, sub, gradient, icon }) => (
+  <div className='rounded-2xl p-5 text-white relative overflow-hidden' style={{ background: gradient }}>
+    <div className='absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-20 bg-white' />
+    <div className='flex items-start justify-between'>
+      <div>
+        <p className='text-xs font-medium opacity-80 mb-1'>{label}</p>
+        <p className='text-2xl font-bold leading-tight'>{value}</p>
+        {sub && <p className='text-xs opacity-70 mt-1'>{sub}</p>}
       </div>
+      <div className='w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl flex-shrink-0'>{icon}</div>
     </div>
-  );
-};
+  </div>
+)
 
 const Stats = () => {
   const [data, setData] = useState(null)
@@ -35,15 +27,9 @@ const Stats = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axios.get(
-          `${backendUrl}/api/v2/admin/stats`,
-          { withCredentials: true }
-        )
-        if (res.data.success) {
-          setData(res.data.data)
-        } else {
-          throw new Error(res.data.message)
-        }
+        const res = await axios.get(`${backendUrl}/api/v2/admin/stats`, { withCredentials: true })
+        if (res.data.success) setData(res.data.data)
+        else throw new Error(res.data.message)
       } catch (e) {
         toast.error(e.message || 'Không tải được thống kê')
       } finally {
@@ -53,179 +39,126 @@ const Stats = () => {
     load()
   }, [])
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-24 text-gray-500 animate-pulse">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          Đang tải thống kê…
-        </div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse'>
+      {Array.from({ length: 4 }).map((_, i) => <div key={i} className='h-28 rounded-2xl' style={{ background: '#EDE9FE' }} />)}
+    </div>
+  )
 
-  if (!data) {
-    return <p className="text-red-500">Không có dữ liệu</p>
-  }
+  if (!data) return <p className='text-rose-500 text-sm'>Không có dữ liệu</p>
 
-  const fmt = (n) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0)
-
-  const topProductsData = (data.topProducts || []).map(p => ({
-    label: p.name.substring(0, 15),
-    value: p.soldCount ?? 0
-  }));
-
-  const lowStockData = (data.lowStockProducts || []).map(p => ({
-    label: p.name.substring(0, 15),
-    value: p.stock
-  }));
-
-  const orderStatusData = [
-    { label: 'Tất cả đơn', value: data.orderCount },
-  ];
+  const { statusCounts = {} } = data
 
   return (
-    <div className="max-w-7xl space-y-8">
-      {/* Header */}
-      <div className='bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-8 shadow-lg'>
-        <h1 className="text-3xl font-bold mb-2">📊 Thống kê cửa hàng</h1>
-        <p className="text-slate-300">Tổng quan đơn hàng, doanh thu và tồn kho</p>
+    <div className='space-y-8'>
+      <div>
+        <h1 className='text-2xl font-bold mb-1' style={{ color: '#1E1B4B' }}>Thống kê cửa hàng</h1>
+        <p className='text-sm' style={{ color: '#9CA3AF' }}>Tổng quan đơn hàng, doanh thu và tồn kho</p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 text-white p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div className='flex items-center justify-between mb-2'>
-            <p className="text-sm text-slate-300">Đơn hàng (không hủy)</p>
-            <span className='text-2xl'>📦</span>
-          </div>
-          <p className="text-4xl font-bold">{data.orderCount}</p>
-          <p className="text-xs text-slate-400 mt-2">Tổng số đơn hàng</p>
-        </div>
+      {/* KPI cards */}
+      <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
+        <StatCard label="Đơn hàng (không hủy)" value={data.orderCount.toLocaleString('vi-VN')}
+          gradient="linear-gradient(135deg,#1E1B4B,#3730A3)" icon="📦" />
 
-        <div className="rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div className='flex items-center justify-between mb-2'>
-            <p className="text-sm text-emerald-100">Doanh thu</p>
-            <span className='text-2xl'>💰</span>
-          </div>
-          <p className="text-3xl font-bold">{fmt(data.revenue).split(',')[0]}</p>
-          <p className="text-xs text-emerald-100 mt-2">{fmt(data.revenue)}</p>
-        </div>
+        <StatCard
+          label="Doanh thu (tất cả đơn)"
+          value={fmt(data.revenue)}
+          sub={`Đã thu: ${fmt(data.paidRevenue)}`}
+          gradient="linear-gradient(135deg,#065F46,#047857)" icon="💰" />
 
-        <div className="rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div className='flex items-center justify-between mb-2'>
-            <p className="text-sm text-violet-100">Sản phẩm</p>
-            <span className='text-2xl'>🛍️</span>
-          </div>
-          <p className="text-4xl font-bold">{data.productCount}</p>
-          <p className="text-xs text-violet-200 mt-2">Sản phẩm trong kho</p>
-        </div>
+        <StatCard label="Sản phẩm" value={data.productCount.toLocaleString('vi-VN')}
+          gradient="linear-gradient(135deg,#4F46E5,#7C3AED)" icon="🛍️" />
 
-        <div className="rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div className='flex items-center justify-between mb-2'>
-            <p className="text-sm text-amber-100">Khách hàng</p>
-            <span className='text-2xl'>👥</span>
-          </div>
-          <p className="text-4xl font-bold">{data.userCount}</p>
-          <p className="text-xs text-amber-100 mt-2">Người dùng tổng</p>
+        <StatCard label="Khách hàng" value={data.userCount.toLocaleString('vi-VN')}
+          gradient="linear-gradient(135deg,#92400E,#B45309)" icon="👥" />
+      </div>
+
+      {/* Revenue breakdown */}
+      <div className='rounded-2xl p-6' style={{ background: '#fff', border: '1.5px solid #DDD6FE' }}>
+        <h2 className='text-base font-bold mb-4' style={{ color: '#1E1B4B' }}>💰 Chi tiết doanh thu</h2>
+        <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+          {[
+            { label: 'Tổng doanh thu (đơn không hủy)', value: fmt(data.revenue), color: '#4F46E5', bg: '#EEF2FF' },
+            { label: 'Đã thực thu (isPaid = true)',      value: fmt(data.paidRevenue), color: '#059669', bg: '#ECFDF5' },
+            { label: 'Chờ thu (COD chưa giao)',
+              value: fmt(Math.max(0, data.revenue - data.paidRevenue)),
+              color: '#D97706', bg: '#FFFBEB' },
+          ].map(c => (
+            <div key={c.label} className='p-4 rounded-xl' style={{ background: c.bg }}>
+              <p className='text-xs font-medium mb-1' style={{ color: '#6B7280' }}>{c.label}</p>
+              <p className='text-xl font-bold' style={{ color: c.color }}>{c.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Total Units & Details */}
-      <div className='rounded-2xl border border-gray-200 bg-white p-8 shadow-sm'>
-        <div className='flex items-center justify-between mb-4'>
-          <h2 className="text-2xl font-bold text-gray-900">📈 Chỉ số bán hàng</h2>
-          <span className='px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold'>
-            {(data.totalSoldUnits ?? 0).toLocaleString('vi-VN')} đơn vị
-          </span>
-        </div>
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mt-6'>
-          <div className='bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg'>
-            <p className='text-sm text-gray-600'>Tổng đơn vị đã bán</p>
-            <p className='text-3xl font-bold text-blue-600'>{(data.totalSoldUnits ?? 0).toLocaleString('vi-VN')}</p>
-          </div>
-          <div className='bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg'>
-            <p className='text-sm text-gray-600'>Doanh thu trung bình</p>
-            <p className='text-2xl font-bold text-green-600'>
-              {data.orderCount > 0 ? fmt(data.revenue / data.orderCount) : '0 ₫'}
-            </p>
-          </div>
-          <div className='bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg'>
-            <p className='text-sm text-gray-600'>Tỷ lệ chuyển đổi</p>
-            <p className='text-3xl font-bold text-purple-600'>
-              {data.userCount > 0 ? ((data.orderCount / data.userCount) * 100).toFixed(1) : '0'}%
-            </p>
-          </div>
+      {/* Order status breakdown */}
+      <div className='rounded-2xl p-6' style={{ background: '#fff', border: '1.5px solid #DDD6FE' }}>
+        <h2 className='text-base font-bold mb-4' style={{ color: '#1E1B4B' }}>📋 Trạng thái đơn hàng</h2>
+        <div className='grid grid-cols-2 sm:grid-cols-5 gap-3'>
+          {[
+            { key: 'pending',   label: 'Chờ xác nhận', color: '#F59E0B', bg: '#FFFBEB' },
+            { key: 'confirmed', label: 'Đã xác nhận',  color: '#3B82F6', bg: '#EFF6FF' },
+            { key: 'shipping',  label: 'Đang giao',    color: '#8B5CF6', bg: '#F5F3FF' },
+            { key: 'delivered', label: 'Đã giao',      color: '#10B981', bg: '#ECFDF5' },
+            { key: 'cancelled', label: 'Đã hủy',       color: '#EF4444', bg: '#FEF2F2' },
+          ].map(s => (
+            <div key={s.key} className='p-3 rounded-xl text-center' style={{ background: s.bg }}>
+              <p className='text-2xl font-bold' style={{ color: s.color }}>{statusCounts[s.key] ?? 0}</p>
+              <p className='text-xs mt-0.5' style={{ color: '#6B7280' }}>{s.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className='grid md:grid-cols-2 gap-8'>
-        {/* Top Products Chart */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            🔥 Sản phẩm bán chạy
-          </h2>
-          {topProductsData.length > 0 ? (
-            <SimpleBarChart data={topProductsData} title="Top 8 sản phẩm" />
-          ) : (
-            <p className="text-gray-400 text-center py-6">Chưa có dữ liệu</p>
-          )}
-        </div>
-
-        {/* Low Stock Chart */}
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-amber-900 mb-4 flex items-center gap-2">
-            ⚠️ Cảnh báo tồn kho thấp (≤ {data.lowStockThreshold})
-          </h2>
-          {lowStockData.length > 0 ? (
-            <SimpleBarChart data={lowStockData} title="Sản phẩm sắp hết" />
-          ) : (
-            <p className="text-amber-800/80 text-center py-6">✅ Tất cả sản phẩm đều có hàng</p>
-          )}
-        </div>
-      </div>
-
-      {/* Detailed Lists */}
-      <div className='grid md:grid-cols-2 gap-8'>
-        {/* Top Products List */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">📋 Top sản phẩm chi tiết</h2>
-          <ul className="space-y-3">
-            {(data.topProducts || []).map((p, idx) => (
-              <li key={p._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors">
-                <div className='flex items-center gap-3'>
-                  <span className='text-sm font-bold bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center'>
-                    {idx + 1}
-                  </span>
-                  <span className='text-gray-800 font-medium line-clamp-2'>{p.name}</span>
-                </div>
-                <span className='text-gray-600 font-semibold shrink-0'>Đã bán {p.soldCount ?? 0}</span>
-              </li>
-            ))}
-            {(!data.topProducts || data.topProducts.length === 0) && (
-              <li className="text-gray-400 text-center py-4">Chưa có dữ liệu</li>
-            )}
-          </ul>
-        </div>
-
-        {/* Low Stock Products List */}
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-amber-900 mb-4">📦 Sản phẩm sắp hết chi tiết</h2>
-          <ul className="space-y-2 text-sm">
-            {(data.lowStockProducts || []).map((p, idx) => (
-              <li key={p._id} className="flex justify-between items-center p-3 bg-white rounded-lg border border-amber-200 hover:bg-amber-100/50 transition-colors">
-                <span className='text-amber-950 font-medium line-clamp-2'>{p.name}</span>
-                <span className='text-amber-700 font-bold shrink-0 bg-amber-200 px-2 py-1 rounded'>
-                  Còn {p.stock}
+      {/* Units & top products */}
+      <div className='grid md:grid-cols-2 gap-6'>
+        <div className='rounded-2xl p-6' style={{ background: '#fff', border: '1.5px solid #DDD6FE' }}>
+          <h2 className='text-base font-bold mb-1' style={{ color: '#1E1B4B' }}>🏆 Bán chạy nhất</h2>
+          <p className='text-xs mb-4' style={{ color: '#9CA3AF' }}>
+            Tổng đơn vị đã bán: <strong style={{ color: '#4F46E5' }}>{(data.totalSoldUnits ?? 0).toLocaleString('vi-VN')}</strong>
+          </p>
+          <div className='space-y-3'>
+            {(data.topProducts || []).map((p, i) => (
+              <div key={p._id} className='flex items-center gap-3'>
+                <span className='w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 text-white'
+                  style={{ background: i === 0 ? '#F59E0B' : i === 1 ? '#94A3B8' : i === 2 ? '#B45309' : '#EDE9FE', color: i < 3 ? '#fff' : '#9CA3AF' }}>
+                  {i + 1}
                 </span>
-              </li>
+                <p className='flex-1 text-sm line-clamp-1' style={{ color: '#1E1B4B' }}>{p.name}</p>
+                <div className='text-right'>
+                  <span className='text-xs font-semibold px-2 py-0.5 rounded-lg'
+                    style={{ background: '#EEF2FF', color: '#4F46E5' }}>
+                    {p.soldCount ?? 0} đã bán
+                  </span>
+                  {p.discount > 0 && (
+                    <span className='ml-1 text-xs font-semibold px-2 py-0.5 rounded-lg'
+                      style={{ background: '#FEE2E2', color: '#EF4444' }}>
+                      -{p.discount}%
+                    </span>
+                  )}
+                </div>
+              </div>
             ))}
-            {(!data.lowStockProducts || data.lowStockProducts.length === 0) && (
-              <li className="text-amber-800/80 text-center py-4">✅ Không có sản phẩm dưới ngưỡng</li>
-            )}
-          </ul>
+          </div>
+        </div>
+
+        <div className='rounded-2xl p-6' style={{ background: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
+          <h2 className='text-base font-bold mb-1' style={{ color: '#92400E' }}>⚠️ Tồn kho thấp</h2>
+          <p className='text-xs mb-4' style={{ color: '#B45309' }}>Ngưỡng ≤ {data.lowStockThreshold} sản phẩm</p>
+          <div className='space-y-2'>
+            {(data.lowStockProducts || []).length === 0 ? (
+              <p className='text-sm' style={{ color: '#92400E' }}>✅ Không có sản phẩm nào dưới ngưỡng</p>
+            ) : (data.lowStockProducts || []).map(p => (
+              <div key={p._id} className='flex justify-between items-center'>
+                <span className='text-sm line-clamp-1 flex-1 mr-3' style={{ color: '#78350F' }}>{p.name}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0 ${p.stock === 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                  {p.stock === 0 ? 'Hết hàng' : `Còn ${p.stock}`}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
