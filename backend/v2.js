@@ -11,7 +11,7 @@ import cartRoutes from './routes/v2/cartRoutes.js'
 import reviewRoutes from './routes/v2/reviewRoutes.js'
 import orderRoutes from './routes/v2/orderRoutes.js'
 import adminRoutes from './routes/v2/adminRoutes.js'
-
+import settingRoutes from './routes/v2/settingRoutes.js'   
 
 // app config
 const app = express()
@@ -36,6 +36,7 @@ app.use('/api/v2/cart', cartRoutes)
 app.use('/api/v2/reviews', reviewRoutes)
 app.use('/api/v2/orders', orderRoutes)
 app.use('/api/v2/admin', adminRoutes)
+app.use('/api/v2/setting', settingRoutes)
 
 app.listen(port, () => {
     console.log(`Local: http://localhost:${port}`)

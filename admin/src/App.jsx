@@ -11,6 +11,7 @@ import { ToastContainer } from 'react-toastify';
 import Home from './pages/Home'
 import Product from './pages/Product'
 import Stats from './pages/Stats'
+import Setting from './pages/Setting'
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL
 export const currency = '₫'
@@ -32,6 +33,7 @@ const App = () => {
               <Route path="/orders" element={<Orders token={isLogin}/>} />
               <Route path="/stats" element={<Stats />} />
               <Route path="/products/:productId" element={<Product />}/>
+              <Route path="/settings" element={<Setting />} />
             </Routes>
           </div>
         </div>

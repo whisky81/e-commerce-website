@@ -1,8 +1,10 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { assets } from '../assets/assets'
+import useShopContext from '../hooks/useShopContext'
 
 const Hero = () => {
+    const { setting } = useShopContext();
     return (
         <div className='flex flex-col sm:flex-row rounded-3xl overflow-hidden shadow-lg border border-slate-200 bg-white hover:shadow-xl transition-shadow duration-300'>
             <div className='w-full sm:w-1/2 flex items-center justify-center py-12 sm:py-16 px-6 sm:px-10'>
@@ -12,7 +14,7 @@ const Hero = () => {
                         <p className='font-semibold text-sm md:text-base text-slate-700 tracking-wide uppercase'>Xu hướng mới</p>
                     </div>
                     <h1 className='prata-regular text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-slate-900'>
-                        Sản phẩm bán chạy
+                        {setting.banner?.name || "Sản phẩm bán chạy"}
                     </h1>
                     <p className='text-slate-600 mb-8 text-sm md:text-base leading-relaxed'>
                         Khám phá bộ sưu tập điện tử mới nhất với công nghệ tiên tiến và giá cả cạnh tranh.
@@ -28,11 +30,11 @@ const Hero = () => {
                     </Link>
                 </div>
             </div>
-            <div className='w-full sm:w-1/2 min-h-[280px] sm:min-h-0 overflow-hidden'>
+            <div className='w-full sm:w-1/2 min-h-70 sm:min-h-0 overflow-hidden'>
                 <img
-                    src={assets.hero2}
+                    src={setting.banner?.url || assets.hero2}
                     alt="Banner cửa hàng - Sản phẩm điện tử chất lượng"
-                    className='w-full h-full min-h-[280px] object-cover hover:scale-105 transition-transform duration-300'
+                    className='w-full h-full min-h-70 object-cover hover:scale-105 transition-transform duration-300'
                 />
             </div>
         </div>

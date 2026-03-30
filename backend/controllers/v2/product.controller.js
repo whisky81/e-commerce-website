@@ -1,7 +1,7 @@
 import Product from "../../models/v2/Product.js";
 import { v2 as cloudinary } from "cloudinary"
 import Review from "../../models/v2/Review.js";
-
+import Setting from "../../models/v2/Setting.js";
 export const productsForAdminReq = async (req, res) => {
     try {
         const products = await Product
@@ -74,6 +74,10 @@ export const products = async (req, res) => {
         const _categories = await Product.distinct('category');
         const _brands = await Product.distinct('brand');
 
+        const config = await Setting.findOne({});
+        const banners = config ? config.banners : [];
+        const banner = banners.find(b => b.isActive);
+
         res.status(200).json({
             success: true,
             page,
@@ -84,6 +88,10 @@ export const products = async (req, res) => {
             filters: {
                 categories: _categories.sort(),
                 brands: _brands.sort()
+            }, 
+            banner: !banner ? null : {
+                name: banner.name,
+                url: banner.url 
             }
         });
 

@@ -19,7 +19,7 @@ const ShopContextProvider = (props) => {
     const [favoriteIds, setFavoriteIds] = useState([]);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
-
+    const [setting, setSetting] = useState({});
     const my = async () => {
         try {
             const response = await axios.get(
@@ -200,6 +200,9 @@ const ShopContextProvider = (props) => {
             if (response.data.success) {
                 setProducts(response.data.data)
                 setFilters(response.data.filters)
+                setSetting({
+                    banner: response.data.banner
+                })
             } else {
                 throw new Error(response.data.message);
             }
@@ -238,7 +241,8 @@ const ShopContextProvider = (props) => {
         filters,
         isAuthenticated, setIsAuthenticated,
         user, setUser, my,
-        favoriteIds, setFavoriteIds, toggleFavorite
+        favoriteIds, setFavoriteIds, toggleFavorite,
+        setting
     };
     return (
         <ShopContext.Provider value={value}>

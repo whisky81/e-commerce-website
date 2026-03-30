@@ -31,6 +31,11 @@ const SideBar = () => {
                     <p className='hidden md:block'>Thống kê</p>
                 </NavLink>
 
+                <NavLink to="/settings" className="flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l">
+                    <span className="w-5 h-5 text-center text-sm font-bold text-emerald-600">⚙️</span>
+                    <p className='hidden md:block'>Cài đặt</p>
+                </NavLink>
+
             </div>
         </div>
     )

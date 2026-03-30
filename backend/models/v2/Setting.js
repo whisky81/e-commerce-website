@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const heroSchema = new mongoose.Schema({
+const bannerSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
@@ -17,7 +17,7 @@ const heroSchema = new mongoose.Schema({
 })
 
 const settingSchema = new mongoose.Schema({
-    heroes: [heroSchema]
+    banners: [bannerSchema]
 }, {
     timestamps: true,
     minimize: false 
