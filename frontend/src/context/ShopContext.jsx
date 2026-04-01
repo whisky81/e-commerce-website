@@ -1,5 +1,4 @@
 import { createContext, useEffect, useState } from "react";
-// import { products } from "../assets/assets";
 import { toast } from 'react-toastify';
 import { useNavigate } from "react-router-dom"
 export const ShopContext = createContext();
@@ -14,25 +13,20 @@ const ShopContextProvider = (props) => {
     const [cartItems, setCartItems] = useState({});
     const navigate = useNavigate();
     const [products, setProducts] = useState([])
-    const [token, setToken] = useState('')
     const [filters, setFilters] = useState({});
     const [favoriteIds, setFavoriteIds] = useState([]);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
     const [setting, setSetting] = useState({});
+
     const my = async () => {
         try {
-            const response = await axios.get(
-                backendUrl + "/api/v2/users/profile",
-                {withCredentials: true}
-            )
-            if (!response.data.success) {
-                throw new Error(response.data.message);
-            }
+            const response = await axios.get(backendUrl + "/api/v2/users/profile", { withCredentials: true })
+            if (!response.data.success) throw new Error(response.data.message);
             setUser(response.data.data);
             setFavoriteIds(response.data.data.favoriteIds || []);
         } catch (error) {
-            toast.error(error.message);
+            // Silently fail — user may not be logged in
         }
     }
 
@@ -42,22 +36,15 @@ const ShopContextProvider = (props) => {
             navigate("/login");
             return;
         }
-        const isFav = favoriteIds.some((id) => id === productId || id?.toString?.() === productId);
+        const isFav = favoriteIds.some(id => id === productId || id?.toString?.() === productId);
         try {
             if (isFav) {
-                await axios.delete(
-                    backendUrl + `/api/v2/users/favorites/${productId}`,
-                    { withCredentials: true }
-                );
-                setFavoriteIds((prev) => prev.filter((id) => id?.toString?.() !== productId?.toString?.()));
+                await axios.delete(backendUrl + `/api/v2/users/favorites/${productId}`, { withCredentials: true });
+                setFavoriteIds(prev => prev.filter(id => id?.toString?.() !== productId?.toString?.()));
                 toast.success("Đã xóa khỏi yêu thích");
             } else {
-                await axios.post(
-                    backendUrl + `/api/v2/users/favorites/${productId}`,
-                    {},
-                    { withCredentials: true }
-                );
-                setFavoriteIds((prev) => [...prev, productId]);
+                await axios.post(backendUrl + `/api/v2/users/favorites/${productId}`, {}, { withCredentials: true });
+                setFavoriteIds(prev => [...prev, productId]);
                 toast.success("Đã thêm vào yêu thích");
             }
         } catch (error) {
@@ -67,51 +54,29 @@ const ShopContextProvider = (props) => {
 
     const cartHelper = async (productId, quantity) => {
         try {
-                const response = await axios.post(
-                    backendUrl + "/api/v2/cart",
-                    {
-                        productId,
-                        quantity
-                    },
-                    {
-                        withCredentials: true 
-                    }
-                )
-                if (response.status === 401) {
-                    navigate("/login");
-                    return;
-                }
-                if (response.data.success) {
-                    toast.success(response.data.message);
-                } else {
-                    throw new Error(response.data.message);
-                }
-            } catch (error) {
-                toast.error(error.message);
-            }
+            const response = await axios.post(backendUrl + "/api/v2/cart", { productId, quantity }, { withCredentials: true })
+            if (response.status === 401) { navigate("/login"); return; }
+            if (!response.data.success) throw new Error(response.data.message);
+        } catch (error) {
+            toast.error(error.message);
+        }
     }
 
-    const addToCart = async (id, name, image, price) => {
+    // price: pass the effective/discounted price
+    const addToCart = async (id, name, image, price, salePrice) => {
+        const effectivePrice = salePrice && salePrice < price ? salePrice : price;
         let cartData = structuredClone(cartItems);
         if (cartData[id]) {
             cartData[id].quantity += 1;
+            cartData[id].price = effectivePrice; // update price in case discount changed
         } else {
-            cartData[id] = {
-                id,
-                name,
-                image,
-                price,
-                quantity: 1
-            }
+            cartData[id] = { id, name, image, price: effectivePrice, quantity: 1 }
         }
         setCartItems(cartData);
-        if (isAuthenticated) {
-            await cartHelper(id, cartData[id].quantity);
-        }
+        if (isAuthenticated) await cartHelper(id, cartData[id].quantity);
     }
 
     const updateQuantity = async (productId, quantity) => {
-        let delFlag = quantity === 0;
         let cartData = structuredClone(cartItems);
         if (quantity > 0) {
             cartData[productId].quantity = quantity;
@@ -120,17 +85,11 @@ const ShopContextProvider = (props) => {
         }
         setCartItems(cartData);
         if (isAuthenticated) {
-            if (delFlag) {
+            if (quantity === 0) {
                 try {
-                    const response = await axios.delete(
-                        backendUrl + `/api/v2/cart/${productId}`,
-                        {withCredentials: true}
-                    )
-                    if (response.data.success) {
-                        toast.success(response.data.message);
-                    } else {
-                        throw new Error(response.data.message);
-                    }
+                    const response = await axios.delete(backendUrl + `/api/v2/cart/${productId}`, { withCredentials: true })
+                    if (response.data.success) toast.success(response.data.message);
+                    else throw new Error(response.data.message);
                 } catch (error) {
                     toast.error(error.message);
                 }
@@ -142,20 +101,11 @@ const ShopContextProvider = (props) => {
 
     const getUserCart = async () => {
         try {
-            const response = await axios.get(
-                backendUrl + "/api/v2/cart",
-                {
-                    withCredentials: true 
-                }
-            )
-            if (response.status === 401) {
-                navigate("/login");
-                return;
-            }
+            const response = await axios.get(backendUrl + "/api/v2/cart", { withCredentials: true })
+            if (response.status === 401) { navigate("/login"); return; }
             if (response.data.success) {
                 const tmp = {};
-                const data = response.data.data;
-                for (const cartData of data) {
+                for (const cartData of response.data.data) {
                     tmp[cartData.product._id] = {
                         id: cartData.product._id,
                         name: cartData.product.name,
@@ -163,57 +113,38 @@ const ShopContextProvider = (props) => {
                         image: cartData.product.images[0],
                         quantity: cartData.quantity
                     }
-                } 
+                }
                 setCartItems(tmp);
             } else {
                 throw new Error(response.data.message);
             }
         } catch (error) {
-            toast.error(error.message);
+            // Silently handle
         }
     }
 
-    const cartCount = () => {
-        let totalCount = 0;
-        for (const productId in cartItems) {
-            totalCount += cartItems[productId].quantity;
-        }
-        return totalCount;
-    }
+    const cartCount = () => Object.values(cartItems).reduce((acc, item) => acc + item.quantity, 0)
 
+    const cartAmount = () => Object.values(cartItems).reduce((acc, item) => acc + item.quantity * item.price, 0)
 
-    const cartAmount = () => {
-        let total = 0;
-        for (const productId in cartItems) {
-            total += cartItems[productId].quantity * cartItems[productId].price;
-        }
-        return total;
-    }
-    const  fetchProductsData = async () => {
+    const fetchProductsData = async () => {
         try {
-            const response = await axios.get(
-                backendUrl + "/api/v2/products?limit=100",
-                {
-                    withCredentials: true 
-                }
-            )
+            const response = await axios.get(backendUrl + "/api/v2/products?limit=100", { withCredentials: true })
             if (response.data.success) {
                 setProducts(response.data.data)
                 setFilters(response.data.filters)
-                setSetting({
-                    banner: response.data.banner
-                })
+                setSetting({ banner: response.data.banner })
             } else {
                 throw new Error(response.data.message);
             }
         } catch (error) {
             toast.error(error.message)
         }
-    }    
+    }
+
+    useEffect(() => { fetchProductsData() }, [])
+
     useEffect(() => {
-        fetchProductsData()
-    }, [])
-    useEffect(()=>{
         if (!isAuthenticated && localStorage.getItem("isAuth")) {
             setIsAuthenticated(localStorage.getItem("isAuth"));
             getUserCart();
@@ -224,7 +155,7 @@ const ShopContextProvider = (props) => {
         } else {
             setFavoriteIds([]);
         }
-    },[isAuthenticated])
+    }, [isAuthenticated])
 
     const value = {
         products,
@@ -236,7 +167,6 @@ const ShopContextProvider = (props) => {
         cartCount, updateQuantity, cartAmount,
         navigate,
         backendUrl,
-        token, setToken,
         setCartItems,
         filters,
         isAuthenticated, setIsAuthenticated,
@@ -244,6 +174,7 @@ const ShopContextProvider = (props) => {
         favoriteIds, setFavoriteIds, toggleFavorite,
         setting
     };
+
     return (
         <ShopContext.Provider value={value}>
             {props.children}

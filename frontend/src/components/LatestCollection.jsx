@@ -5,12 +5,12 @@ import ProductItem from './ProductItem';
 
 const LatestCollection = () => {
   const { products } = useShopContext();
-  const [latestProducts, setLastestProducts] = useState([]);
+  const [latestProducts, setLatestProducts] = useState([]);
 
   useEffect(() => {
-    setLastestProducts(products.slice(0, 10));
+    setLatestProducts(products.slice(0, 10));
   }, [products]);
-  // console.log(products)
+
   return (
     <div className='my-10'>
       <div className='text-center py-8 text-3xl'>
@@ -21,10 +21,18 @@ const LatestCollection = () => {
           Sự lựa chọn hoàn hảo cho cuộc sống số hiện đại.
         </p>
       </div>
-
       <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 gap-y-6'>
-        {latestProducts.map((item, index) => (
-          <ProductItem key={index} id={item._id} images={item.images} name={item.name} price={item.price} soldCount={item.soldCount} />
+        {latestProducts.map((item) => (
+          <ProductItem
+            key={item._id}
+            id={item._id}
+            images={item.images}
+            name={item.name}
+            price={item.price}
+            salePrice={item.salePrice}
+            discount={item.discount}
+            soldCount={item.soldCount}
+          />
         ))}
       </div>
     </div>

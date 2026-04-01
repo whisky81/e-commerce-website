@@ -1,38 +1,13 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import useShopContext from '../hooks/useShopContext'
 import Title from './Title';
 
+const fmt = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
+
 const CartTotal = () => {
     const { cartAmount, deliveryFee } = useShopContext();
-    const [fee, setFee] = useState({
-        amount: 0,
-        shipping: deliveryFee,
-        total: 0
-    })
-
-    useEffect(() => {
-        const tmp = cartAmount();
-        const amount = new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(tmp);
-
-        const shipping = new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(deliveryFee);
-
-        const total = new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(cartAmount(tmp === 0 ? 0 : tmp + deliveryFee));
-
-        setFee({
-            amount,
-            shipping,
-            total
-        })
-    }, [cartAmount()]);
+    const subtotal = cartAmount();
+    const total    = subtotal > 0 ? subtotal + deliveryFee : 0;
 
     return (
         <div className='w-full'>
@@ -41,18 +16,18 @@ const CartTotal = () => {
             </div>
             <div className='flex flex-col gap-2 mt-2 text-sm'>
                 <div className='flex justify-between'>
-                    <p>Tạm tính</p>
-                    <p>{fee.amount}</p>
+                    <p className='text-gray-600'>Tạm tính</p>
+                    <p className='font-medium'>{fmt(subtotal)}</p>
                 </div>
                 <hr />
                 <div className='flex justify-between'>
-                    <p>Phí vận chuyển</p>
-                    <p>{fee.shipping}</p>
+                    <p className='text-gray-600'>Phí vận chuyển</p>
+                    <p className='font-medium'>{subtotal > 0 ? fmt(deliveryFee) : '—'}</p>
                 </div>
                 <hr />
-                <div className='flex justify-between'>
+                <div className='flex justify-between font-semibold text-base'>
                     <p>Tổng cộng</p>
-                    <p>{fee.total}</p>
+                    <p className='text-blue-600'>{fmt(total)}</p>
                 </div>
             </div>
         </div>

@@ -30,7 +30,7 @@ const App = () => {
       ) : (
         <>
           <NavBar setIsLogin={setIsLogin} />
-          <div className='flex w-full max-w-[1600px] mx-auto'>
+          <div className='flex w-full max-w-400 mx-auto'>
             <SideBar />
             <div className="flex-1 min-w-0 px-4 sm:px-8 lg:px-10 py-8">
               <Routes>

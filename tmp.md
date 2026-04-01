@@ -17,7 +17,6 @@ tạo ra file guide2.md để biết đã cải tiến, bổ sung những gì v�
 
 
 
-
 với phiên bản phía backend là v2 hãy
 1: Thống kê được doanh thu (kiểm tra xem thống kê phía admin đã chuẩn chưa)
 3: sale cần phải tự động, thông minh, chỉ cần nhập % (chính là discount - hãy bổ sung vào backend và áp dụng nó vào frontend và admin)
