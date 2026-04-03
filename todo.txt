@@ -40,3 +40,8 @@ hướng dẫn chạy
 
 lưu ý: tìm sửa xóa những sản phẩm nhiều tiếng anh
 
+
+
+# frontend
+- `cart bug`: chọn 1 sản phẩm nhưng ở 
+        phần thưc hiện chọn thanh toán giá là tổng sản phẩm trong giỏ

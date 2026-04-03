@@ -17,7 +17,6 @@ const addressSchema = new mongoose.Schema(
     district: { type: String, required: true, trim: true },
     province: { type: String, required: true, trim: true },
     isDefault: { type: Boolean, default: false },
-    // Google Maps
     lat: { type: Number, default: null },
     lng: { type: Number, default: null },
     placeId: { type: String, default: null },
@@ -31,6 +30,9 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, trim: true, lowercase: true, index: true },
     password: { type: String, required: true, minlength: 8, select: false },
 
+    // ✅ Avatar - URL Cloudinary
+    avatar: { type: String, default: null },
+
     cart:      [cartItemSchema],
     addresses: [addressSchema],
 
@@ -40,8 +42,8 @@ const userSchema = new mongoose.Schema(
     isEmailVerified: { type: Boolean, default: false },
 
     // Email verification
-    emailVerificationToken:   { type: String,  select: false },
-    emailVerificationExpires: { type: Date,    select: false },
+    emailVerificationToken:   { type: String, select: false },
+    emailVerificationExpires: { type: Date,   select: false },
 
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }]
   },

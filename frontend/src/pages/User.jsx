@@ -1,180 +1,237 @@
-import { useEffect } from "react";
+// frontend/src/pages/User.jsx
+import { useEffect, useState } from "react";
 import useShopContext from "../hooks/useShopContext";
 import { toast } from "react-toastify";
 import axios from "axios";
 
 const User = () => {
-    const { user, navigate, isAuthenticated, backendUrl, my } = useShopContext();
-    const deleteAddr = async (id) => {
-        try {
-            const response = await axios.delete(
-                backendUrl + `/api/v2/users/addresses/${id}`,
-                {
-                    withCredentials: true 
-                }
-            )
-            if (!response.data.success) {
-                throw new Error(response.data.message);
-            }
-            toast.success(response.data.message);
-            await my();
-        } catch (error) {
-            toast.error(error.message);
-        }
+  const { user, navigate, isAuthenticated, backendUrl, my } = useShopContext();
+  const [uploading, setUploading] = useState(false);
+
+  // ─── Upload avatar ─────────────────────────────────────────────────────────
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh hợp lệ");
+      return;
     }
-    useEffect(() => {
-        if (!isAuthenticated) navigate("/login");
-    }, []);
-    if (!user) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-pulse text-gray-500">Đang tải...</div>
-            </div>
-        );
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ảnh không được vượt quá 5MB");
+      return;
     }
-    
-    console.log(user);
-    
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("avatar", file);
+      const res = await axios.post(`${backendUrl}/api/v2/users/avatar`, form, { withCredentials: true });
+      if (res.data.success) {
+        toast.success("Cập nhật ảnh đại diện thành công");
+        await my();
+      } else throw new Error(res.data.message);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Upload thất bại");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const deleteAddr = async (id) => {
+    try {
+      const response = await axios.delete(
+        backendUrl + `/api/v2/users/addresses/${id}`,
+        { withCredentials: true }
+      );
+      if (!response.data.success) throw new Error(response.data.message);
+      toast.success(response.data.message);
+      await my();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) navigate("/login");
+  }, []);
+
+  if (!user) {
     return (
-        <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Thông tin tài khoản</h1>
-                    <p className="text-gray-600 mt-2">Quản lý thông tin cá nhân và địa chỉ của bạn</p>
-                </div>
-
-                {/* User Info Card */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
-                    <div className="bg-linear-to-r from-gray-600 to-gray-700 px-6 py-4">
-                        <h2 className="text-lg font-semibold text-white">Thông tin cá nhân</h2>
-                    </div>
-                    
-                    <div className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="flex items-start gap-3">
-                                <div className="shrink-0">
-                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">ID tài khoản</p>
-                                    <p className="text-gray-900 font-mono text-sm">{user.id}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-3">
-                                <div className="shrink-0">
-                                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">Họ và tên</p>
-                                    <p className="text-gray-900 font-medium">{user.name}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-3 md:col-span-2">
-                                <div className="shrink-0">
-                                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">Email</p>
-                                    <p className="text-gray-900">{user.email}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Addresses Section */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="bg-linear-to-r from-gray-600 to-gray-700 px-6 py-4 flex justify-between items-center">
-                        <h2 className="text-lg font-semibold text-white">Địa chỉ của tôi</h2>
-                        <span className="bg-white text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
-                            {user.addresses.length} địa chỉ
-                        </span>
-                    </div>
-                    
-                    <div className="p-6">
-                        {user.addresses.length > 0 ? (
-                            <div className="space-y-4">
-                                {user.addresses.map((addr, index) => (
-                                    <div 
-                                        key={index} 
-                                        className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow"
-                                    >
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                                                    <span className="text-gray-600 font-semibold">
-                                                        {addr.fullName?.charAt(0) || 'A'}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-semibold text-gray-900">{addr.fullName}</p>
-                                                    <p className="text-sm text-gray-500">{addr.phone}</p>
-                                                </div>
-                                            </div>
-                                            {addr.isDefault && (
-                                                <span className="bg-green-100 text-gray-700 text-xs px-3 py-1 rounded-full">
-                                                    Mặc định
-                                                </span>
-                                            )}
-                                        </div>
-                                        
-                                        <div className="ml-13 pl-13">
-                                            <div className="flex items-start gap-2 text-gray-600">
-                                                <svg className="w-4 h-4 mt-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                                <p className="text-sm">
-                                                    {addr.street}, {addr.ward}, {addr.district}, {addr.province}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-3 mt-4 pt-3 border-t border-gray-100">
-                                            <button className="text-sm text-gray-600 hover:text-gray-700 font-medium">
-                                                Sửa
-                                            </button>
-                                            <button 
-                                                onClick={() => deleteAddr(addr._id)}
-                                                className="text-sm text-red-600 hover:text-red-700 font-medium">
-                                                Xóa
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12">
-                                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <p className="text-gray-500">Bạn chưa có địa chỉ nào</p>
-                                <button className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
-                                    Thêm địa chỉ mới
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-gray-500 text-lg">Đang tải...</div>
+      </div>
     );
-}
+  }
+
+  const avatarUrl = user.avatar
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4F46E5&color=fff&size=160&bold=true`;
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Thông tin tài khoản</h1>
+          <p className="text-gray-500 mt-1">Quản lý thông tin cá nhân và địa chỉ của bạn</p>
+        </div>
+
+        {/* User Info Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+          <div className="bg-gradient-to-r from-slate-800 to-indigo-900 px-6 py-4">
+            <h2 className="text-lg font-semibold text-white">Thông tin cá nhân</h2>
+          </div>
+
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start mb-6">
+              {/* ✅ Avatar với upload */}
+              <div className="relative flex-shrink-0">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-100 shadow-md">
+                  <img
+                    src={avatarUrl}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <label
+                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-indigo-700 transition-colors shadow-md"
+                  title="Đổi ảnh đại diện"
+                >
+                  {uploading ? (
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                  <input
+                    type="file" accept="image/*" className="hidden"
+                    onChange={handleAvatarUpload} disabled={uploading}
+                  />
+                </label>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{user.name}</h3>
+                <p className="text-gray-500 text-sm mt-0.5">{user.email}</p>
+                {user.isEmailVerified ? (
+                  <span className="inline-flex items-center gap-1 mt-2 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                    ✅ Email đã xác nhận
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 mt-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+                    ⚠️ Email chưa xác nhận
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+                <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs">ID tài khoản</p>
+                  <p className="font-mono text-xs text-gray-700 mt-0.5 break-all">{user.id}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+                <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs">Email</p>
+                  <p className="text-gray-700 mt-0.5">{user.email}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Addresses */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-800 to-indigo-900 px-6 py-4 flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-white">Địa chỉ của tôi</h2>
+            <span className="bg-white text-indigo-700 px-3 py-0.5 rounded-full text-sm font-semibold">
+              {user.addresses.length} địa chỉ
+            </span>
+          </div>
+
+          <div className="p-6">
+            {user.addresses.length > 0 ? (
+              <div className="space-y-4">
+                {user.addresses.map((addr, index) => (
+                  <div key={addr._id || index}
+                    className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-700">
+                          {addr.fullName?.charAt(0).toUpperCase() || "A"}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{addr.fullName}</p>
+                          <p className="text-sm text-gray-500">{addr.phone}</p>
+                        </div>
+                      </div>
+                      {addr.isDefault && (
+                        <span className="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">
+                          Mặc định
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-start gap-2 text-gray-600 ml-13 pl-1">
+                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <p className="text-sm">
+                        {addr.street}, {addr.ward}, {addr.district}, {addr.province}
+                      </p>
+                    </div>
+
+                    {addr.lat && addr.lng && (
+                      <a href={`https://www.google.com/maps?q=${addr.lat},${addr.lng}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="mt-2 ml-5 text-xs text-indigo-600 hover:underline inline-flex items-center gap-1">
+                        📍 Xem trên Google Maps
+                      </a>
+                    )}
+
+                    <div className="flex gap-3 mt-4 pt-3 border-t border-gray-100">
+                      <button
+                        onClick={() => deleteAddr(addr._id)}
+                        className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">
+                        🗑️ Xóa
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <p className="text-gray-400">Chưa có địa chỉ nào</p>
+                <p className="text-sm text-gray-400 mt-1">Thêm địa chỉ khi đặt hàng</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default User;

@@ -94,7 +94,7 @@ export const productReviews = async (req, res) => {
             product: productId,
             isHidden: false
         })
-            .populate("user", "name")
+            .populate("user", "name avatar")
             .select("rating comment media createdAt");
         // console.log(reviews)
 
@@ -105,7 +105,10 @@ export const productReviews = async (req, res) => {
                 rating: r.rating,
                 comment: r.comment,
                 media: r.media,
-                user: r.user.name,
+                user: {
+                    name: r.user.name,
+                    avatar: r.user.avatar
+                },
                 createdAt: r.createdAt
             }))
         });
