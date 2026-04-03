@@ -1,5 +1,4 @@
-//  
-// components/ProductReviews.jsx
+// frontend/src/pages/Review.jsx
 import { useState, useRef } from 'react';
 import { assets } from '../assets/assets';
 import { toast } from 'react-toastify';
@@ -87,31 +86,30 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
             formData.append("productId", productId);
             formData.append("rating", newReview.rating);
             formData.append("comment", newReview.comment);
-            newReview.media[0] && formData.append("media1", newReview.media[0]);
-            newReview.media[1] && formData.append("media1", newReview.media[1]);
+            // FIX: was appending both files as "media1"; second file must be "media2"
+            if (newReview.media[0]) formData.append("media1", newReview.media[0]);
+            if (newReview.media[1]) formData.append("media2", newReview.media[1]);
+
             let response = await axios.post(
                 backendUrl + "/api/v2/reviews",
                 formData,
-                {
-                    withCredentials: true
-                }
-            )
-            if (!response.data.message) {
+                { withCredentials: true }
+            );
+            if (!response.data.success) {
                 throw new Error(response.data.message);
             }
             response = await axios.get(
-                backendUrl +  `/api/v2/products/${productId}/reviews`,
-                {
-                    withCredentials: true 
-                }
-            )
+                backendUrl + `/api/v2/products/${productId}/reviews`,
+                { withCredentials: true }
+            );
             if (response.data.success) {
                 setReviews(response.data.data);
             }
             setNewReview({ rating: 0, comment: '', media: [] });
             setShowReviewForm(false);
+            toast.success('Đánh giá của bạn đã được gửi thành công!');
         } catch (error) {
-            toast.error('Có lỗi xảy ra khi gửi đánh giá');
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi gửi đánh giá');
         }
     };
 
@@ -155,7 +153,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
 
     return (
         <div className="border-x border-b px-6 py-6">
-            {/* Header với thống kê và nút đánh giá */}
+            {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4 flex-wrap">
                     <div className="text-center">
@@ -188,12 +186,11 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                 </button>
             </div>
 
-            {/* Form đánh giá mới */}
+            {/* Form */}
             {showReviewForm && (
                 <form onSubmit={handleSubmitReview} className="mb-8 p-4 bg-gray-50 rounded-lg">
                     <h3 className="font-medium text-gray-800 mb-3">Viết đánh giá của bạn</h3>
 
-                    {/* Rating stars */}
                     <div className="mb-3">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Chất lượng sản phẩm *
@@ -223,7 +220,6 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                         </div>
                     </div>
 
-                    {/* Comment */}
                     <div className="mb-3">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Nhận xét của bạn *
@@ -239,7 +235,6 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                         />
                     </div>
 
-                    {/* Media upload */}
                     <div className="mb-3">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Hình ảnh / Video (tối đa 2 file)
@@ -328,7 +323,6 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                 <div className="space-y-6">
                     {currentReviews.map((review) => (
                         <div key={review._id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
-                            {/* User info */}
                             <div className="flex items-start gap-3 mb-3 flex-wrap">
                                 <img
                                     src={review.user?.avatar || assets.default_avatar}
@@ -362,10 +356,8 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                                 </div>
                             </div>
 
-                            {/* Comment */}
                             <p className="text-gray-700 mb-3 wrap-break-word">{review.comment}</p>
 
-                            {/* Media */}
                             {review.media && review.media.length > 0 && (
                                 <div className="flex gap-2 mb-3 flex-wrap">
                                     {review.media.map((item, index) => (
@@ -395,7 +387,6 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                                 </div>
                             )}
 
-                            {/* Helpful button */}
                             <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
                                 <button className="flex items-center gap-1 hover:text-blue-500 transition-colors whitespace-nowrap">
                                     <span>👍</span>
@@ -404,11 +395,6 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                                 <button className="hover:text-blue-500 transition-colors whitespace-nowrap">
                                     Trả lời
                                 </button>
-                                {review.user?.purchaseCount > 0 && (
-                                    <span className="text-xs text-gray-400 whitespace-nowrap">
-                                        Đã mua hàng tại shop
-                                    </span>
-                                )}
                             </div>
                         </div>
                     ))}

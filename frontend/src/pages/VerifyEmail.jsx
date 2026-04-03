@@ -1,5 +1,5 @@
 // frontend/src/pages/VerifyEmail.jsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import useShopContext from "../hooks/useShopContext";
@@ -9,13 +9,8 @@ const VerifyEmail = () => {
   const { backendUrl, my } = useShopContext();
   const [status,  setStatus]  = useState("loading"); // loading | success | error
   const [message, setMessage] = useState("");
-  // ✅ Dùng useRef để tránh React StrictMode gọi API 2 lần
-  const calledRef = useRef(false);
 
   useEffect(() => {
-    if (calledRef.current) return;
-    calledRef.current = true;
-
     const token = searchParams.get("token");
     if (!token) {
       setStatus("error");
@@ -23,13 +18,27 @@ const VerifyEmail = () => {
       return;
     }
 
+    // ── AbortController approach ────────────────────────────────────────────
+    // React 18 StrictMode mounts → runs effect → unmounts → remounts → runs
+    // effect again.  The previous useRef guard prevented the second (real) call
+    // and left the component stuck on "loading".
+    //
+    // With AbortController, the first request is *cancelled* when the component
+    // unmounts (StrictMode cleanup).  The second mount issues a fresh request
+    // that actually completes.  In production there is no double-mount, so a
+    // single request is made and completed normally.
+    const controller = new AbortController();
+
     axios
-      .get(`${backendUrl}/api/v2/auth/verify-email?token=${encodeURIComponent(token)}`)
+      .get(
+        `${backendUrl}/api/v2/auth/verify-email?token=${encodeURIComponent(token)}`,
+        { signal: controller.signal }
+      )
       .then(res => {
         if (res.data.success) {
           setStatus("success");
           setMessage(res.data.message);
-          // Refresh user state nếu đang đăng nhập
+          // Refresh user state if the user is already logged in
           try { my(); } catch {}
         } else {
           setStatus("error");
@@ -37,17 +46,23 @@ const VerifyEmail = () => {
         }
       })
       .catch(err => {
+        // Ignore cancellation (caused by StrictMode unmount / cleanup)
+        if (axios.isCancel(err) || err.code === "ERR_CANCELED") return;
         setStatus("error");
         setMessage(
           err.response?.data?.message || "Có lỗi xảy ra. Vui lòng thử lại."
         );
       });
+
+    // Cleanup: abort in-flight request when component unmounts
+    return () => controller.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // run once on mount
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full text-center">
+
         {/* Loading */}
         {status === "loading" && (
           <div className="space-y-4">
@@ -123,6 +138,7 @@ const VerifyEmail = () => {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

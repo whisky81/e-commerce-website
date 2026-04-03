@@ -19,7 +19,7 @@ const PlaceOrder = () => {
   const location = useLocation();
   const { navigate, backendUrl, cartItems, setCartItems, user, my } = useShopContext();
 
-  // ✅ Lấy đúng các item được chọn từ Cart
+  // Items passed from Cart.jsx (only the ones the user selected)
   const selectedCartItems = location.state?.selectedCartItems || Object.values(cartItems);
 
   const [method,             setMethod]             = useState("cod");
@@ -62,7 +62,7 @@ const PlaceOrder = () => {
     if (!selectedAddress) { toast.warning("Vui lòng chọn địa chỉ giao hàng"); return; }
     setPlacing(true);
 
-    // ✅ Luôn gửi kèm orderItems để chỉ mua các sản phẩm đã chọn
+    // Only order the selected items
     const orderItems = selectedCartItems.map(item => ({
       product:  item.id,
       quantity: item.quantity,
@@ -141,8 +141,6 @@ const PlaceOrder = () => {
     }
   };
 
-  const cartArr = selectedCartItems;
-
   return (
     <form
       onSubmit={onSubmitHandler}
@@ -155,7 +153,7 @@ const PlaceOrder = () => {
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <div className="mb-4"><Title text1="Thông Tin" text2="Sản Phẩm" /></div>
           <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-            {cartArr.map(item => (
+            {selectedCartItems.map(item => (
               <div key={item.id} className="bg-gray-50 rounded-xl p-3 hover:shadow-sm transition-shadow">
                 <ProductRow image={item.image} name={item.name} productId={item.id} price={item.price} quantity={item.quantity} />
               </div>
@@ -207,7 +205,11 @@ const PlaceOrder = () => {
       {/* Right */}
       <div className="w-full lg:w-1/3">
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm sticky top-24 space-y-6">
-          <CartTotal />
+          {/*
+            FIX: pass `items={selectedCartItems}` so CartTotal computes the total
+            for the purchased subset only, not the entire cart.
+          */}
+          <CartTotal items={selectedCartItems} />
 
           <div>
             <Title text1="Phương Thức" text2="Thanh Toán" />

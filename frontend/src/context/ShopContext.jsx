@@ -19,6 +19,34 @@ const ShopContextProvider = (props) => {
     const [user, setUser] = useState(null);
     const [setting, setSetting] = useState({});
 
+    // ─── Handle OAuth redirect (?auth=success lands on any page) ─────────────
+    // Google / Facebook callbacks redirect to /?auth=success.
+    // Because Login.jsx is NOT mounted on the home page, we handle the flag
+    // here in the context so it works regardless of which page the user lands on.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const authResult = params.get("auth");
+        const authError  = params.get("error");
+
+        if (authResult === "success") {
+            setIsAuthenticated(true);
+            localStorage.setItem("isAuth", "true");
+            // Remove the query param to avoid re-processing on refresh
+            window.history.replaceState({}, "", window.location.pathname);
+            toast.success("Đăng nhập thành công!");
+        } else if (authError) {
+            const messages = {
+                google:   "Đăng nhập Google thất bại. Vui lòng thử lại.",
+                facebook: "Đăng nhập Facebook thất bại. Vui lòng thử lại.",
+            };
+            toast.error(messages[authError] || "Đăng nhập OAuth thất bại.");
+            // Clean up the URL
+            window.history.replaceState({}, "", window.location.pathname);
+        }
+    // Intentionally empty deps – run once on app mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const my = async () => {
         try {
             const response = await axios.get(backendUrl + "/api/v2/users/profile", { withCredentials: true })
@@ -62,13 +90,12 @@ const ShopContextProvider = (props) => {
         }
     }
 
-    // price: pass the effective/discounted price
     const addToCart = async (id, name, image, price, salePrice) => {
         const effectivePrice = salePrice && salePrice < price ? salePrice : price;
         let cartData = structuredClone(cartItems);
         if (cartData[id]) {
             cartData[id].quantity += 1;
-            cartData[id].price = effectivePrice; // update price in case discount changed
+            cartData[id].price = effectivePrice;
         } else {
             cartData[id] = { id, name, image, price: effectivePrice, quantity: 1 }
         }
@@ -146,7 +173,9 @@ const ShopContextProvider = (props) => {
 
     useEffect(() => {
         if (!isAuthenticated && localStorage.getItem("isAuth")) {
-            setIsAuthenticated(localStorage.getItem("isAuth"));
+            // FIX: was `setIsAuthenticated(localStorage.getItem("isAuth"))` which set the
+            // state to the string "true" instead of the boolean true.
+            setIsAuthenticated(true);
             getUserCart();
         }
         if (isAuthenticated) {
