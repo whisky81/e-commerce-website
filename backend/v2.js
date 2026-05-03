@@ -18,6 +18,7 @@ import adminRoutes      from "./routes/v2/adminRoutes.js";
 import settingRoutes    from "./routes/v2/settingRoutes.js";
 import marketingRoutes  from "./routes/v2/marketingRoutes.js";
 import subscriberRoutes from "./routes/v2/subscriberRoutes.js";
+import errorHandler from "./middleware/errorHandler.js";
 
 const app  = express();
 const port = process.env.PORT || 5000;
@@ -54,4 +55,19 @@ app.use("/api/v2/subscribers", subscriberRoutes);
 
 app.get("/", (req, res) => res.json({ message: "ABC Shop API v2 is running" }));
 
-app.listen(port, () => console.log(`🚀 Server running: http://localhost:${port}`));
+app.use(errorHandler);
+
+const server = app.listen(port, () => console.log(`🚀 Server running: http://localhost:${port}`));
+
+process.on('unhandledRejection', (reason, promise) => {
+  // temp logging 
+  console.error('Unhandled Rejection:', reason);
+  // Graceful shutdown
+  server.close(() => process.exit(1));
+});
+
+process.on('uncaughtException', (err) => {
+  // temp logging 
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
