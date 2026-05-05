@@ -30,7 +30,5 @@ const subscriberSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-subscriberSchema.index({ email: 1 }, { unique: true });
-
 export default mongoose.models.Subscriber
   || mongoose.model("Subscriber", subscriberSchema);

@@ -1,4 +1,3 @@
-// backend/routes/v2/productRoutes.js
 import express from 'express'
 import {
     createProduct,
@@ -12,11 +11,12 @@ import {
 import { protect, adminOnly } from '../../middleware/v2/auth.middleware.js'
 import upload from '../../middleware/multer.js'
 import { productReviews, updateReview, deleteReview } from '../../controllers/v2/review.controller.js'
+import catchAsync from "../../middleware/catchAsync.js";
 
 const productRoutes = express.Router()
 
 productRoutes.get('/admin', protect, adminOnly, productsForAdminReq)
-productRoutes.get('/', products)
+productRoutes.get('/', catchAsync(products))
 productRoutes.get("/:productId", productDetail)
 
 productRoutes.post('/', protect, adminOnly, upload.fields([
@@ -24,7 +24,6 @@ productRoutes.post('/', protect, adminOnly, upload.fields([
     { name: 'img3', maxCount: 1 }, { name: 'img4', maxCount: 1 },
 ]), createProduct)
 
-// ✅ Nhập hàng loạt từ Excel (JSON)
 productRoutes.post('/bulk-import', protect, adminOnly, bulkImportProducts)
 
 productRoutes.put('/:productId', protect, adminOnly, updateProduct)

@@ -1,33 +1,25 @@
-import AppError from "../errors/AppError.js";
 import CastError from "../errors/CastError.js";
 import ValidationError from "../errors/ValidationError.js";
 import DuplicateError from "../errors/DuplicateKeyError.js";
+import logger from "../config/Logger.js";
 
 const errorHandler = (err, req, res, next) => {
-
-    // temp logging
-    console.error({
-        // what happened
-        message: err.message,
-        errorCode: err.errorCode,
-        name: err.name,          
-        // where
-        stack: err.stack,
-        // who
-        ip: req.ip,
-        user: req.user?.id || "unauthenticated",
-        // when
-        timestamp: err.timestamp || new Date().toISOString(),
-        // request
-        method: req.method,
-        url: req.originUrl,
-        // severity
-        level: 'unknown',
-        statusCode: err.statusCode || 500,
-        // optional
-        body: req.body,
-        isOperational: err.isOperational
-    })
+    if (err.isOperational) {
+        logger.warn('Operational Error', {
+            requestId: req.requestId,
+            errorCode: err.errorCode,
+            ip: req.ip,
+            user: req.user?.id || "unauthenticated",
+            method: req.method,
+            path: req.path 
+        });
+    } else {
+        logger.logError(err, {
+            requestId: req.requestId,
+            method: req.method,
+            path: req.path 
+        });
+    }
 
     // mongoose
     if (err.name === "CastError") {
@@ -69,7 +61,6 @@ const errorHandler = (err, req, res, next) => {
         errorCode: 'INTERNAL_SERVER_ERROR',
         message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message 
     })
-    
 }
 
 export default errorHandler;

@@ -19,6 +19,7 @@ import settingRoutes    from "./routes/v2/settingRoutes.js";
 import marketingRoutes  from "./routes/v2/marketingRoutes.js";
 import subscriberRoutes from "./routes/v2/subscriberRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
+import requestLogger from "./middleware/requestLogger.js";
 
 const app  = express();
 const port = process.env.PORT || 5000;
@@ -42,6 +43,7 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+app.use(requestLogger);
 app.use("/api/v2/auth",        authRoutes);
 app.use("/api/v2/users",       userRoutes);
 app.use("/api/v2/products",    productRoutes);

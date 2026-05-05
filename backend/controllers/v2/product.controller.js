@@ -2,6 +2,7 @@ import Product from "../../models/v2/Product.js";
 import { v2 as cloudinary } from "cloudinary";
 import Review from "../../models/v2/Review.js";
 import Setting from "../../models/v2/Setting.js";
+import AppError from "../../errors/AppError.js";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -11,7 +12,7 @@ const getEffectivePrice = (product) => {
     const inSale =
         product.discount > 0 &&
         (!product.saleStartAt || product.saleStartAt <= now) &&
-        (!product.saleEndAt   || product.saleEndAt   >= now);
+        (!product.saleEndAt || product.saleEndAt >= now);
     return inSale ? Math.round(product.price * (1 - product.discount / 100)) : product.price;
 };
 
@@ -32,71 +33,68 @@ export const productsForAdminReq = async (req, res) => {
 // ─── Public list ─────────────────────────────────────────────────────────────
 
 export const products = async (req, res) => {
-    try {
-        const page  = Number(req.query.page)  || 1;
-        const limit = Number(req.query.limit) || 12;
-        const skip  = (page - 1) * limit;
+    // throw new AppError('this is test', 400, 'TEST');
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 12;
+    const skip = (page - 1) * limit;
 
-        const { category, categories, brand, brands, minPrice, maxPrice, sort, search, q } = req.query;
-        const searchTerm = (search || q || "").trim();
-        const filter = {};
+    const { category, categories, brand, brands, minPrice, maxPrice, sort, search, q } = req.query;
+    const searchTerm = (search || q || "").trim();
+    const filter = {};
 
-        if (categories) {
-            const list = String(categories).split(",").map(c => c.trim()).filter(Boolean);
-            if (list.length) filter.category = { $in: list };
-        } else if (category) {
-            filter.category = category;
-        }
-
-        if (brands) {
-            const blist = String(brands).split(",").map(b => b.trim()).filter(Boolean);
-            if (blist.length) filter.brand = { $in: blist };
-        } else if (brand) {
-            filter.brand = brand;
-        }
-
-        if (searchTerm) filter.name = { $regex: searchTerm, $options: "i" };
-
-        if (minPrice || maxPrice) {
-            filter.price = {};
-            if (minPrice) filter.price.$gte = Number(minPrice);
-            if (maxPrice) filter.price.$lte = Number(maxPrice);
-        }
-
-        let sortOption = { createdAt: -1 };
-        if (sort === "price")  sortOption = { price:  1 };
-        if (sort === "-price") sortOption = { price: -1 };
-
-        const [rawProducts, total, _categories, _brands, config] = await Promise.all([
-            Product.find(filter)
-                .select("_id name price images category brand stock soldCount discount saleStartAt saleEndAt")
-                .sort(sortOption).skip(skip).limit(limit),
-            Product.countDocuments(filter),
-            Product.distinct("category"),
-            Product.distinct("brand"),
-            Setting.findOne({}),
-        ]);
-
-        // Gắn salePrice cho từng sản phẩm
-        const data = rawProducts.map(p => {
-            const obj = p.toObject({ virtuals: true });
-            obj.salePrice = getEffectivePrice(p);
-            return obj;
-        });
-
-        const banners = config ? config.banners : [];
-        const banner  = banners.find(b => b.isActive);
-
-        res.status(200).json({
-            success: true, page, limit, total,
-            totalPages: Math.ceil(total / limit),
-            data,
-            filters: { categories: _categories.sort(), brands: _brands.sort() },
-            banner: banner ? { name: banner.name, url: banner.url } : null,
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error: error.message });
+    if (categories) {
+        const list = String(categories).split(",").map(c => c.trim()).filter(Boolean);
+        if (list.length) filter.category = { $in: list };
+    } else if (category) {
+        filter.category = category;
     }
+
+    if (brands) {
+        const blist = String(brands).split(",").map(b => b.trim()).filter(Boolean);
+        if (blist.length) filter.brand = { $in: blist };
+    } else if (brand) {
+        filter.brand = brand;
+    }
+
+    if (searchTerm) filter.name = { $regex: searchTerm, $options: "i" };
+
+    if (minPrice || maxPrice) {
+        filter.price = {};
+        if (minPrice) filter.price.$gte = Number(minPrice);
+        if (maxPrice) filter.price.$lte = Number(maxPrice);
+    }
+
+    let sortOption = { createdAt: -1 };
+    if (sort === "price") sortOption = { price: 1 };
+    if (sort === "-price") sortOption = { price: -1 };
+
+    const [rawProducts, total, _categories, _brands, config] = await Promise.all([
+        Product.find(filter)
+            .select("_id name price images category brand stock soldCount discount saleStartAt saleEndAt")
+            .sort(sortOption).skip(skip).limit(limit),
+        Product.countDocuments(filter),
+        Product.distinct("category"),
+        Product.distinct("brand"),
+        Setting.findOne({}),
+    ]);
+
+    // Gắn salePrice cho từng sản phẩm
+    const data = rawProducts.map(p => {
+        const obj = p.toObject({ virtuals: true });
+        obj.salePrice = getEffectivePrice(p);
+        return obj;
+    });
+
+    const banners = config ? config.banners : [];
+    const banner = banners.find(b => b.isActive);
+
+    res.status(200).json({
+        success: true, page, limit, total,
+        totalPages: Math.ceil(total / limit),
+        data,
+        filters: { categories: _categories.sort(), brands: _brands.sort() },
+        banner: banner ? { name: banner.name, url: banner.url } : null,
+    });
 };
 
 // ─── Product detail ──────────────────────────────────────────────────────────
@@ -163,7 +161,7 @@ export const createProduct = async (req, res) => {
             soldCount: 0,
             discount: discountNum,
             saleStartAt: saleStartAt || null,
-            saleEndAt:   saleEndAt   || null,
+            saleEndAt: saleEndAt || null,
         });
 
         res.status(201).json({ success: true, message: "Product created", data: { _id: product._id } });
@@ -180,22 +178,22 @@ export const updateProduct = async (req, res) => {
         const product = await Product.findById(productId);
         if (!product) return res.status(404).json({ success: false, message: "Product not found" });
 
-        const fields = ["name","description","price","category","brand","specifications","note","stock","discount","saleStartAt","saleEndAt"];
+        const fields = ["name", "description", "price", "category", "brand", "specifications", "note", "stock", "discount", "saleStartAt", "saleEndAt"];
 
         if (req.body.specifications !== undefined) {
             let specs = req.body.specifications;
-            if (typeof specs === "string") { try { specs = JSON.parse(specs); } catch {} }
+            if (typeof specs === "string") { try { specs = JSON.parse(specs); } catch { } }
             product.specifications = specs;
         }
 
         fields.forEach(field => {
             if (field === "specifications") return;
             if (req.body[field] !== undefined) {
-                if (["price","stock"].includes(field)) {
+                if (["price", "stock"].includes(field)) {
                     product[field] = Math.max(0, Number(req.body[field]));
                 } else if (field === "discount") {
                     product.discount = Math.min(100, Math.max(0, Number(req.body[field])));
-                } else if (["saleStartAt","saleEndAt"].includes(field)) {
+                } else if (["saleStartAt", "saleEndAt"].includes(field)) {
                     product[field] = req.body[field] ? new Date(req.body[field]) : null;
                 } else {
                     product[field] = req.body[field];
