@@ -1,4 +1,4 @@
-import Setting from "../../models/v2/Setting.js";
+import Setting from "../models/Setting.js";
 import { v2 as cloudinary } from "cloudinary"
 
 const settingId = "69c938ee2ad8114c4c5f26ac";

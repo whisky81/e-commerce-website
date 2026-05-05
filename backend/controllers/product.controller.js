@@ -1,8 +1,8 @@
-import Product from "../../models/v2/Product.js";
+import Product from "../models/Product.js";
 import { v2 as cloudinary } from "cloudinary";
-import Review from "../../models/v2/Review.js";
-import Setting from "../../models/v2/Setting.js";
-import AppError from "../../errors/AppError.js";
+import Review from "../models/Review.js";
+import Setting from "../models/Setting.js";
+import AppError from "../errors/AppError.js";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 

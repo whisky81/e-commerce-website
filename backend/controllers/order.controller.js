@@ -1,13 +1,13 @@
-// backend/controllers/v2/order.controller.js
+// backend/controllers/order.controller.js
 import Stripe from "stripe";
-import Order from "../../models/v2/Order.js";
-import Product from "../../models/v2/Product.js";
-import User from "../../models/v2/User.js";
-import Subscriber from "../../models/v2/Subscriber.js";
+import Order from "../models/Order.js";
+import Product from "../models/Product.js";
+import User from "../models/User.js";
+import Subscriber from "../models/Subscriber.js";
 import mongoose from "mongoose";
-import { createMoMoPayment } from "../../services/momoService.js";
-import { createVNPayUrl } from "../../services/vnpayService.js";
-import { sendOrderConfirmation } from "../../services/emailService.js";
+import { createMoMoPayment } from "../services/momoService.js";
+import { createVNPayUrl } from "../services/vnpayService.js";
+import { sendOrderConfirmation } from "../services/emailService.js";
 import nodemailer from "nodemailer";
 
 const shippingPrice = 20000;
@@ -291,7 +291,7 @@ export const placeOrderMoMo = async (req, res) => {
       amount:   newOrder.totalPrice,
       orderInfo: `Thanh toan don hang #${newOrder._id}`,
       returnUrl: `${origin}/verify?method=momo&orderId=${newOrder._id}`,
-      notifyUrl: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/v2/orders/momo-ipn`,
+      notifyUrl: `${process.env.BACKEND_URL || "http://localhost:5000"}/api/orders/momo-ipn`,
     });
 
     if (result.resultCode !== 0) {
@@ -403,7 +403,7 @@ export const verifyMoMoIPN = async (req, res) => {
 // ─── Verify VNPay Return ──────────────────────────────────────────────────────
 export const verifyVNPayReturn = async (req, res) => {
   try {
-    const { verifyVNPayReturn: verifyFn } = await import("../../services/vnpayService.js");
+    const { verifyVNPayReturn: verifyFn } = await import("../services/vnpayService.js");
     const isValid = verifyFn(req.query);
     const orderId = req.query.vnp_TxnRef;
 

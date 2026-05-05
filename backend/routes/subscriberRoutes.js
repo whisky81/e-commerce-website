@@ -1,7 +1,7 @@
-// backend/routes/v2/subscriberRoutes.js
+// backend/routes/subscriberRoutes.js
 import express from "express";
-import Subscriber from "../../models/v2/Subscriber.js";
-import { protect } from "../../middleware/v2/auth.middleware.js";
+import Subscriber from "../models/Subscriber.js";
+import { protect } from "../middleware/auth.middleware.js";
 
 const subscriberRoutes = express.Router();
 

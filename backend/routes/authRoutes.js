@@ -1,11 +1,11 @@
-// backend/routes/v2/authRoutes.js
+// backend/routes/authRoutes.js
 import express from "express";
 import {
   register, login, logout,
   verifyEmail, resendVerification
-} from "../../controllers/v2/auth.controller.js";
-import { protect } from "../../middleware/v2/auth.middleware.js";
-import passport, { setTokenCookie } from "../../config/passport.js";
+} from "../controllers/auth.controller.js";
+import { protect } from "../middleware/auth.middleware.js";
+import passport, { setTokenCookie } from "../config/passport.js";
 
 const authRoutes = express.Router();
 

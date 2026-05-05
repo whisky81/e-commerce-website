@@ -1,7 +1,7 @@
-// backend/routes/v2/marketingRoutes.js
+// backend/routes/marketingRoutes.js
 import express from "express"
-import { protect, adminOnly } from "../../middleware/v2/auth.middleware.js"
-import { sendBulkPromo, applyBulkDiscount, removeBulkDiscount } from "../../controllers/v2/marketing.controller.js"
+import { protect, adminOnly } from "../middleware/auth.middleware.js"
+import { sendBulkPromo, applyBulkDiscount, removeBulkDiscount } from "../controllers/marketing.controller.js"
 
 const marketingRoutes = express.Router()
 

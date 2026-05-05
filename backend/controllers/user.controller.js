@@ -1,5 +1,5 @@
-import User from "../../models/v2/User.js"
-import Product from "../../models/v2/Product.js"
+import User from "../models/User.js"
+import Product from "../models/Product.js"
 import { v2 as cloudinary } from "cloudinary"
 import validator from "validator"
 import mongoose from "mongoose"

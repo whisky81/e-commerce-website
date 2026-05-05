@@ -1,7 +1,7 @@
 // backend/controllers/v2/adminStats.controller.js
-import Order from "../../models/v2/Order.js";
-import Product from "../../models/v2/Product.js";
-import User from "../../models/v2/User.js";
+import Order from "../models/Order.js";
+import Product from "../models/Product.js";
+import User from "../models/User.js";
 
 const LOW_STOCK_THRESHOLD = 10;
 

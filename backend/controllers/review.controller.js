@@ -1,5 +1,5 @@
-import Product from "../../models/v2/Product.js";
-import Review from "../../models/v2/Review.js";
+import Product from "../models/Product.js";
+import Review from "../models/Review.js";
 import { v2 as cloudinary } from "cloudinary"
 
 export const createReview = async (req, res) => {

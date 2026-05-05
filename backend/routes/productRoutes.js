@@ -7,11 +7,11 @@ import {
     updateProduct,
     productsForAdminReq,
     bulkImportProducts,
-} from '../../controllers/v2/product.controller.js'
-import { protect, adminOnly } from '../../middleware/v2/auth.middleware.js'
-import upload from '../../middleware/multer.js'
-import { productReviews, updateReview, deleteReview } from '../../controllers/v2/review.controller.js'
-import catchAsync from "../../middleware/catchAsync.js";
+} from '../controllers/product.controller.js'
+import { protect, adminOnly } from '../middleware/auth.middleware.js'
+import upload from '../middleware/multer.js'
+import { productReviews, updateReview, deleteReview } from '../controllers/review.controller.js'
+import catchAsync from "../middleware/catchAsync.js";
 
 const productRoutes = express.Router()
 

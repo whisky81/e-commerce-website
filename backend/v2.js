@@ -6,18 +6,19 @@ import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import connectCloudinary from "./config/cloudinary.js";
 import passport from "./config/passport.js";
+import logger from "./config/Logger.js";
 
 // Routes
-import authRoutes       from "./routes/v2/authRoutes.js";
-import userRoutes       from "./routes/v2/userRoutes.js";
-import productRoutes    from "./routes/v2/productRoutes.js";
-import cartRoutes       from "./routes/v2/cartRoutes.js";
-import reviewRoutes     from "./routes/v2/reviewRoutes.js";
-import orderRoutes      from "./routes/v2/orderRoutes.js";
-import adminRoutes      from "./routes/v2/adminRoutes.js";
-import settingRoutes    from "./routes/v2/settingRoutes.js";
-import marketingRoutes  from "./routes/v2/marketingRoutes.js";
-import subscriberRoutes from "./routes/v2/subscriberRoutes.js";
+import authRoutes       from "./routes/authRoutes.js";
+import userRoutes       from "./routes/userRoutes.js";
+import productRoutes    from "./routes/productRoutes.js";
+import cartRoutes       from "./routes/cartRoutes.js";
+import reviewRoutes     from "./routes/reviewRoutes.js";
+import orderRoutes      from "./routes/orderRoutes.js";
+import adminRoutes      from "./routes/adminRoutes.js";
+import settingRoutes    from "./routes/settingRoutes.js";
+import marketingRoutes  from "./routes/marketingRoutes.js";
+import subscriberRoutes from "./routes/subscriberRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import requestLogger from "./middleware/requestLogger.js";
 
@@ -62,14 +63,17 @@ app.use(errorHandler);
 const server = app.listen(port, () => console.log(`🚀 Server running: http://localhost:${port}`));
 
 process.on('unhandledRejection', (reason, promise) => {
-  // temp logging 
-  console.error('Unhandled Rejection:', reason);
+  logger.error('Unhandled Rejection', {
+    reason
+  })
   // Graceful shutdown
   server.close(() => process.exit(1));
 });
 
 process.on('uncaughtException', (err) => {
-  // temp logging 
-  console.error('Uncaught Exception:', err);
+  logger.error('Uncaught Exception', {
+    message: err.message,
+    stack: err.stack 
+  });
   process.exit(1);
 });

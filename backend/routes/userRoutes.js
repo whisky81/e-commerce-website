@@ -1,12 +1,12 @@
-// backend/routes/v2/userRoutes.js
+// backend/routes/userRoutes.js
 import express from "express";
-import { protect } from "../../middleware/v2/auth.middleware.js";
-import upload from "../../middleware/multer.js";
+import { protect } from "../middleware/auth.middleware.js";
+import upload from "../middleware/multer.js";
 import {
   addAddress, profile, updateProfile, updateAddress, deleteAddress,
   listFavorites, addFavorite, removeFavorite,
   uploadAvatar,
-} from "../../controllers/v2/user.controller.js";
+} from "../controllers/user.controller.js";
 
 const userRoutes = express.Router();
 

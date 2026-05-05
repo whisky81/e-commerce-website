@@ -1,7 +1,7 @@
-// backend/controllers/v2/marketing.controller.js
-import Subscriber from "../../models/v2/Subscriber.js"
-import Product from "../../models/v2/Product.js"
-import { sendPromotionEmail } from "../../services/emailService.js"
+// backend/controllers/marketing.controller.js
+import Subscriber from "../models/Subscriber.js"
+import Product from "../models/Product.js"
+import { sendPromotionEmail } from "../services/emailService.js"
 
 /** Gửi email khuyến mãi chỉ cho Subscriber đã đăng ký */
 export const sendBulkPromo = async (req, res) => {

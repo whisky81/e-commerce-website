@@ -1,6 +1,6 @@
-// backend/routes/v2/orderRoutes.js
+// backend/routes/orderRoutes.js
 import express from "express";
-import { protect, adminOnly } from "../../middleware/v2/auth.middleware.js";
+import { protect, adminOnly } from "../middleware/auth.middleware.js";
 import {
   placeOrder,
   placeOrderStripe,
@@ -14,7 +14,7 @@ import {
   verifyVNPayReturn,
   cancelOrder,
   contactSupport,
-} from "../../controllers/v2/order.controller.js";
+} from "../controllers/order.controller.js";
 
 const orderRoutes = express.Router();
 

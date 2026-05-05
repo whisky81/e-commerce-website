@@ -3,7 +3,7 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as FacebookStrategy } from "passport-facebook";
 import jwt from "jsonwebtoken";
-import User from "../models/v2/User.js";
+import User from "../models/User.js";
 
 const setTokenCookie = (res, user) => {
   const token = jwt.sign(

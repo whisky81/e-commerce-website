@@ -1,9 +1,9 @@
-import User from "../../models/v2/User.js";
+import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import sendToken from "../../utils/generateToken.js";
+import sendToken from "../utils/generateToken.js";
 import validator from "validator";
-import { sendVerificationEmail } from "../../services/emailService.js";
+import { sendVerificationEmail } from "../services/emailService.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const generateVerificationToken = () => {

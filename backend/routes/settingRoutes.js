@@ -1,7 +1,7 @@
 import express from "express";
-import { protect, adminOnly } from "../../middleware/v2/auth.middleware.js";
-import { config, addNewBanner, chooseBanner } from "../../controllers/v2/setting.controller.js";
-import upload from "../../middleware/multer.js";
+import { protect, adminOnly } from "../middleware/auth.middleware.js";
+import { config, addNewBanner, chooseBanner } from "../controllers/setting.controller.js";
+import upload from "../middleware/multer.js";
 
 const settingRoutes = express.Router();
 
