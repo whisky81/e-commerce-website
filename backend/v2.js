@@ -45,16 +45,16 @@ app.use(passport.initialize());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use(requestLogger);
-app.use("/api/v2/auth",        authRoutes);
-app.use("/api/v2/users",       userRoutes);
-app.use("/api/v2/products",    productRoutes);
-app.use("/api/v2/cart",        cartRoutes);
-app.use("/api/v2/reviews",     reviewRoutes);
-app.use("/api/v2/orders",      orderRoutes);
-app.use("/api/v2/admin",       adminRoutes);
-app.use("/api/v2/setting",     settingRoutes);
-app.use("/api/v2/marketing",   marketingRoutes);
-app.use("/api/v2/subscribers", subscriberRoutes);
+app.use("/api/auth",        authRoutes);
+app.use("/api/users",       userRoutes);
+app.use("/api/products",    productRoutes);
+app.use("/api/cart",        cartRoutes);
+app.use("/api/reviews",     reviewRoutes);
+app.use("/api/orders",      orderRoutes);
+app.use("/api/admin",       adminRoutes);
+app.use("/api/setting",     settingRoutes);
+app.use("/api/marketing",   marketingRoutes);
+app.use("/api/subscribers", subscriberRoutes);
 
 app.get("/", (req, res) => res.json({ message: "ABC Shop API v2 is running" }));
 
