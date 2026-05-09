@@ -1,4 +1,3 @@
-// backend/routes/orderRoutes.js
 import express from "express";
 import { protect, adminOnly } from "../middleware/auth.middleware.js";
 import {
@@ -15,19 +14,19 @@ import {
   cancelOrder,
   contactSupport,
 } from "../controllers/order.controller.js";
-
+import catchAsync from "../middleware/catchAsync.js";
 const orderRoutes = express.Router();
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
-orderRoutes.get ("/",       protect, adminOnly, ordersList);
-orderRoutes.put ("/status", protect, adminOnly, updateStatus);
+orderRoutes.get ("/",       protect, adminOnly, catchAsync(ordersList));
+orderRoutes.put ("/status", protect, adminOnly, catchAsync(updateStatus));
 
 // ─── User ─────────────────────────────────────────────────────────────────────
-orderRoutes.post("/place",  protect, placeOrder);
+orderRoutes.post("/place",  protect, catchAsync(placeOrder));
 orderRoutes.post("/stripe", protect, placeOrderStripe);
 orderRoutes.post("/momo",   protect, placeOrderMoMo);
 orderRoutes.post("/vnpay",  protect, placeOrderVNPay);
-orderRoutes.get ("/my",     protect, userOrders);
+orderRoutes.get ("/me",     protect, catchAsync(userOrders));
 
 // ─── Payment verification ─────────────────────────────────────────────────────
 orderRoutes.post("/verify-stripe", protect, verifyStripe);
@@ -35,7 +34,7 @@ orderRoutes.post("/momo-ipn",      verifyMoMoIPN);           // webhook – khô
 orderRoutes.get ("/vnpay-return",  verifyVNPayReturn);       // GET redirect từ VNPay
 
 // ─── Order actions ────────────────────────────────────────────────────────────
-orderRoutes.patch("/:orderId/cancel",  protect, cancelOrder);
-orderRoutes.post ("/:orderId/contact", protect, contactSupport);
+orderRoutes.patch("/:orderId/cancel",  protect, catchAsync(cancelOrder));
+orderRoutes.post ("/:orderId/contact", protect, catchAsync(contactSupport));
 
 export default orderRoutes;

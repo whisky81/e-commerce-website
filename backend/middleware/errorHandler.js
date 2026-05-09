@@ -20,6 +20,10 @@ const errorHandler = (err, req, res, next) => {
             path: req.path 
         });
     }
+    // app error 
+    if (err.isOperational) {
+        return res.status(err.statusCode).json(err.toObject());
+    }
 
     // mongoose
     if (err.name === "CastError") {
@@ -48,11 +52,6 @@ const errorHandler = (err, req, res, next) => {
             errorCode: 'TOKEN_EXPIRED',
             message: 'Token expired'
         });
-    }
-
-    // app error 
-    if (err.isOperational) {
-        return res.status(err.statusCode).json(err.toObject());
     }
 
     // programmer error || unknown error 

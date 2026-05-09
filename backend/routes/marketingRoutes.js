@@ -2,11 +2,14 @@
 import express from "express"
 import { protect, adminOnly } from "../middleware/auth.middleware.js"
 import { sendBulkPromo, applyBulkDiscount, removeBulkDiscount } from "../controllers/marketing.controller.js"
+import catchAsync from "../middleware/catchAsync.js";
 
 const marketingRoutes = express.Router()
 
-marketingRoutes.post("/send-promo",      protect, adminOnly, sendBulkPromo)
-marketingRoutes.post("/bulk-discount",   protect, adminOnly, applyBulkDiscount)
-marketingRoutes.post("/remove-discount", protect, adminOnly, removeBulkDiscount)
+marketingRoutes.use(protect, adminOnly);
+
+marketingRoutes.post("/send-promo",      catchAsync(sendBulkPromo)) 
+marketingRoutes.post("/bulk-discount",   catchAsync(applyBulkDiscount)) 
+marketingRoutes.delete("/bulk-discount", catchAsync(removeBulkDiscount))
 
 export default marketingRoutes

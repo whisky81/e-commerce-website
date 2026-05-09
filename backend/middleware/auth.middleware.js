@@ -1,34 +1,26 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import Forbidden from "../errors/ForbiddenError.js";
+// import UnauthorizedError from "../errors/UnauthorizedError.js";
+import AppError from "../errors/AppError.js";
+import UnauthorizedError from "../errors/UnauthorizedError.js";
 
 export const protect = async (req, res, next) => {
   const token = req.cookies.token;
-
   if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: "Not authorized, no token"
-    });
+    const err = new UnauthorizedError();
+    return next(err);
   }
-
-  try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await User.findById(decoded.id);
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid token"
-    });
-  }
+    if (!req.user?.isActive) throw new AppError("Non-existent account.", 400, "NON_EXISTENT_ACCOUNT");
+    return next();
 };
 
 export const adminOnly = (req, res, next) => {
   if (req.user.role !== "admin") {
-    return res.status(403).json({
-      success: false,
-      message: "Forbidden"
-    });
+    const err = new Forbidden();
+    return next(err);
   }
-  next();
+  return next();
 }

@@ -18,4 +18,15 @@ const connectCloudinary = async () => {
     }
 }
 
+export const delImage = async (productId) => {
+    try {
+        const result = await cloudinary.uploader.destroy(
+            productId
+        );
+        return result.result === "ok";
+    } catch (error) {
+        return false;
+    }
+}
+
 export default connectCloudinary

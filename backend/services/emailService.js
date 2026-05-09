@@ -2,15 +2,15 @@
 import nodemailer from "nodemailer";
 
 const createTransporter = () => nodemailer.createTransport({
-  host:   process.env.SMTP_HOST || "smtp.gmail.com",
-  port:   Number(process.env.SMTP_PORT) || 587,
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: Number(process.env.SMTP_PORT) || 587,
   secure: false,
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
 });
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
 
-const SHOP_NAME    = process.env.SHOP_NAME || "ABC Shop";
+const SHOP_NAME = process.env.SHOP_NAME || "ABC Shop";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 // ─── Xác nhận đặt hàng ───────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ export const sendOrderConfirmation = async ({
 // ─── Email xác nhận địa chỉ email ────────────────────────────────────────────
 export const sendVerificationEmail = async ({ to, name, token }) => {
   const transporter = createTransporter();
-  const verifyUrl   = `${FRONTEND_URL}/verify-email?token=${token}`;
+  const verifyUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
 
   await transporter.sendMail({
     from: `"${SHOP_NAME}" <${process.env.SMTP_USER}>`,
@@ -137,7 +137,7 @@ export const sendPromotionEmail = async ({ to, name, subject, products, promoCod
        text-decoration:none;background:#fff;border-radius:12px;border:1px solid #E5E7EB;
        overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)">
       <div style="height:130px;overflow:hidden;background:#F9FAFB">
-        <img src="${p.images?.[0]}" alt="${p.name}" style="width:100%;height:130px;object-fit:cover"/>
+        <img src="${p.images?.[0]?.url}" alt="${p.name}" style="width:100%;height:130px;object-fit:cover"/>
       </div>
       <div style="padding:10px">
         <p style="font-size:12px;color:#111827;margin:0 0 6px;font-weight:600;
@@ -198,3 +198,8 @@ export const sendPromotionEmail = async ({ to, name, subject, products, promoCod
     </div>`,
   });
 };
+
+export const sendEmail = async ({ from, to, subject, html }) => {
+  const transporter = createTransporter();
+  await transporter.sendMail({ from, to, subject, html });
+}

@@ -6,17 +6,15 @@ import {
 } from "../controllers/auth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import passport, { setTokenCookie } from "../config/passport.js";
+import catchAsync from "../middleware/catchAsync.js";
 
 const authRoutes = express.Router();
 
-// ─── Cơ bản ───────────────────────────────────────────────────────────────────
-authRoutes.post("/register", register);
-authRoutes.post("/login",    login);
-authRoutes.post("/logout",   protect, logout);
-
-// ─── Email verification ───────────────────────────────────────────────────────
-authRoutes.get ("/verify-email",         verifyEmail);
-authRoutes.post("/resend-verification",  protect, resendVerification);
+authRoutes.post("/register", catchAsync(register));
+authRoutes.post("/login",    catchAsync(login));
+authRoutes.post("/logout",   protect, catchAsync(logout));
+authRoutes.get ("/verify-email",         catchAsync(verifyEmail));
+authRoutes.post("/resend-verification",  protect, catchAsync(resendVerification));
 
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 authRoutes.get("/google",

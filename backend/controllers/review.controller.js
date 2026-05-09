@@ -1,129 +1,94 @@
 import Product from "../models/Product.js";
 import Review from "../models/Review.js";
-import { v2 as cloudinary } from "cloudinary"
+import { v2 as cloudinary } from "cloudinary";
+import MissingRequiredFieldError from "../errors/MissingRequiredFieldError.js";
+import NotFoundError from "../errors/NotFoundError.js";
+import CastError from "../errors/CastError.js";
+import ValidationError from "../errors/ValidationError.js";
+import ApiResponse from "../utils/ApiResponse.js";
 
 export const createReview = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        let {
-            productId,
-            rating,
-            comment
-        } = req.body;
-        if (!productId || !rating) {
-            return res.status(400).json({
-                success: false,
-                message: "Missing required fields"
-            })
-        }
+    const userId = req.user._id;
+    let {
+        productId,
+        rating,
+        comment
+    } = req.body;
 
-        const existingProduct = await Product.findById(productId);
-        if (!existingProduct) {
-            return res.status(404).json({
-                success: false,
-                message: "Product not found"
-            })
-        }
-
-        if (!(
-            typeof rating === "string" &&
-            rating.trim() !== "" &&
-            !isNaN(Number(rating.trim())))) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid rating"
-            })
-        }
-        rating = Number(rating);
-        if (rating < 1 || rating > 5) {
-            return res.status(400).json({
-                success: false,
-                message: "Rating must be between 1 and 5"
-            })
-        }
-
-        const media1 = req.files.media1 && req.files.media1[0];
-        const media2 = req.files.media2 && req.files.media2[0];
-
-        const medias = [media1, media2].filter(media => media != undefined);
-        const mediasUrl = await Promise.all(
-            medias.map(async (item) => {
-                let result = await cloudinary.uploader.upload(item.path, {
-                    resource_type: "auto"
-                })
-                return {
-                    url: result.secure_url,
-                    type: item.mimetype.startsWith("image") ? "image" : "video"
-                }
-            })
-        )
-
-        await Review.create({
-            user: userId,
-            product: productId,
-            rating,
-            comment,
-            media: mediasUrl
-        })
-
-        return res.status(201).json({
-            success: true,
-            message: "Review created",
-        })
-
-
-    } catch (error) {
-        if (error.code === 11000) {
-            return res.status(409).json({
-                success: false,
-                message: "You already reviewed this product"
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: "Server error"
-        })
+    // service + repository
+    if (!productId || !rating) {
+        throw new MissingRequiredFieldError('Missing required fields');
     }
-}
 
-export const productReviews = async (req, res) => {
-    try {
-        const { productId } = req.params;
-
-        const reviews = await Review.find({
-            product: productId,
-            isHidden: false
-        })
-            .populate("user", "name avatar")
-            .select("rating comment media createdAt");
-        // console.log(reviews)
-
-        return res.status(200).json({
-            success: true,
-            data: reviews.map(r => ({
-                _id: r._id,
-                rating: r.rating,
-                comment: r.comment,
-                media: r.media,
-                user: {
-                    name: r.user.name,
-                    avatar: r.user.avatar
-                },
-                createdAt: r.createdAt
-            }))
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Server error"
-        })
+    const existingProduct = await Product.findById(productId);
+    if (!existingProduct) {
+        throw new NotFoundError('Product');
     }
+
+    if (!(
+        typeof rating === "string" &&
+        rating.trim() !== "" &&
+        !isNaN(Number(rating.trim())))) {
+        throw new CastError('Invalid rating');
+    }
+    rating = Number(rating);
+    if (rating < 1 || rating > 5) {
+        throw new ValidationError('Rating must be between 1 and 5');
+    }
+
+    // thrid party service 
+    // try/catch: undo the action when an error occurs 
+    const media1 = req.files.media1 && req.files.media1[0];
+    const media2 = req.files.media2 && req.files.media2[0];
+
+    const medias = [media1, media2].filter(media => media != undefined);
+    const mediasUrl = await Promise.all(
+        medias.map(async (item) => {
+            let result = await cloudinary.uploader.upload(item.path, {
+                resource_type: "auto"
+            })
+            return {
+                url: result.secure_url,
+                type: item.mimetype.startsWith("image") ? "image" : "video"
+            }
+        })
+    )
+
+    const newReview = await Review.create({
+        user: userId,
+        product: productId,
+        rating,
+        comment,
+        media: mediasUrl
+    })
+
+    ApiResponse.created(newReview).send(res);
 }
 
 export const updateReview = async (req, res) => {
+    const { reviewId } = req.params;
+    const {
+        rating,
+        comment
+    } = req.body;
+    const userId = req.user._id; 
 
-}
+    if (!rating || !comment) throw new MissingRequiredFieldError('Missing required fields');
+    const update = { comment };
+    if (isNaN(Number(rating)) 
+        || Number(rating) < 1 
+    || Number(rating) > 5) throw new ValidationError('Invalid rating');
+    update.rating = Number(rating);
+    
+    const review = await Review.findOneAndUpdate(
+        {
+            _id: reviewId,
+            user: userId
+        },
+        { $set: update },
+        { new: true, runValidators: true }
+    );
+    if (!review) throw new NotFoundError('Review');
 
-export const deleteReview = async (req, res) => {
-
+    ApiResponse.success('Success', review).send(res);
 }

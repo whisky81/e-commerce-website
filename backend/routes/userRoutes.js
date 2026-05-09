@@ -1,35 +1,37 @@
-// backend/routes/userRoutes.js
 import express from "express";
 import { protect } from "../middleware/auth.middleware.js";
 import upload from "../middleware/multer.js";
 import {
-  addAddress, profile, updateProfile, updateAddress, deleteAddress,
+  addAddress, profile, updateProfile, updateAddress, bulkDeleteAddresses,
   listFavorites, addFavorite, removeFavorite,
   uploadAvatar,
 } from "../controllers/user.controller.js";
+import catchAsync from "../middleware/catchAsync.js";
 
 const userRoutes = express.Router();
 
+userRoutes.use(protect);
+
+
 // ─── Profile ──────────────────────────────────────────────────────────────────
-userRoutes.get ("/profile", protect, profile);
-userRoutes.put ("/profile", protect, updateProfile);
+userRoutes.get ("/profile", catchAsync(profile));
+userRoutes.put ("/profile", catchAsync(updateProfile));
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 userRoutes.post(
   "/avatar",
-  protect,
   upload.fields([{ name: "avatar", maxCount: 1 }]),
-  uploadAvatar
+  catchAsync(uploadAvatar)
 );
 
 // ─── Favorites ────────────────────────────────────────────────────────────────
-userRoutes.get   ("/favorites",           protect, listFavorites);
-userRoutes.post  ("/favorites/:productId",protect, addFavorite);
-userRoutes.delete("/favorites/:productId",protect, removeFavorite);
+userRoutes.get   ("/favorites", catchAsync(listFavorites));
+userRoutes.post  ("/favorites/:productId", catchAsync(addFavorite));
+userRoutes.delete("/favorites/:productId", catchAsync(removeFavorite));
 
 // ─── Addresses ────────────────────────────────────────────────────────────────
-userRoutes.post  ("/addresses",            protect, addAddress);
-userRoutes.put   ("/addresses/:addressId", protect, updateAddress);
-userRoutes.delete("/addresses/:addressId", protect, deleteAddress);
+userRoutes.post  ("/addresses", catchAsync(addAddress));
+userRoutes.put   ("/addresses/:addressId", catchAsync(updateAddress));
+userRoutes.delete("/addresses", catchAsync(bulkDeleteAddresses));
 
 export default userRoutes;

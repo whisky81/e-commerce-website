@@ -17,7 +17,12 @@ const bannerSchema = new mongoose.Schema({
 })
 
 const settingSchema = new mongoose.Schema({
-    banners: [bannerSchema]
+    banners: [bannerSchema],
+    lowStockThreshold: {
+        type: Number,
+        min: 1,
+        default: 10
+    }
 }, {
     timestamps: true,
     minimize: false 

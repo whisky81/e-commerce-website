@@ -47,7 +47,6 @@ const reviewSchema = new mongoose.Schema(
     }
 );
 
-/* 1 user chỉ được review 1 product */
 reviewSchema.index({ user: 1, product: 1 }, { unique: true });
 
 const Review =
