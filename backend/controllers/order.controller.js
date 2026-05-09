@@ -25,11 +25,6 @@ const getStripe = () => {
   return _stripe;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Xác thực email đã verify — ném AppError nếu chưa verify
- */
 const requireEmailVerified = (user) => {
   if (!user.isEmailVerified) {
     throw new AppError(
@@ -38,20 +33,6 @@ const requireEmailVerified = (user) => {
       "EMAIL_NOT_VERIFIED"
     );
   }
-};
-
-/**
- * Tính giá effective của product (salePrice nếu đang trong thời gian sale)
- */
-const getEffectivePrice = (product) => {
-  const now = new Date();
-  const inSale =
-    product.discount > 0 &&
-    (!product.saleStartAt || product.saleStartAt <= now) &&
-    (!product.saleEndAt || product.saleEndAt >= now);
-  return inSale
-    ? Math.round(product.price * (1 - product.discount / 100))
-    : product.price;
 };
 
 /**
@@ -82,12 +63,15 @@ const resolveOrderItems = (orderItems, userCart) => {
  * @param {Array} orderItems - [{ product: ObjectId|string, quantity: number }]
  */
 const buildLineItems = async (orderItems) => {
-  const productIds = orderItems.map((i) => i.product);
+  const productIds = [];
   const quantityMap = {};
-  for (const i of orderItems) quantityMap[i.product.toString()] = i.quantity;
+  for (const i of orderItems) {
+    productIds.push(i.product);
+    quantityMap[i.product] = i.quantity;
+  }
 
   const products = await Product.find({ _id: { $in: productIds } })
-    .select("name price stock images discount saleStartAt saleEndAt")
+    .select("name price stock images")
     .lean({ virtuals: true });
 
   if (products.length !== productIds.length) {
@@ -99,8 +83,7 @@ const buildLineItems = async (orderItems) => {
     const qty = quantityMap[p._id.toString()];
     if (p.stock < qty)
       throw new AppError(`Sản phẩm "${p.name}" không đủ hàng`, 400, "OUT_OF_STOCK");
-    const price = getEffectivePrice(p);
-    itemsPrice += price * qty;
+    itemsPrice += p.salePrice * qty;
     return {
       product: p._id,
       name: p.name,
@@ -109,7 +92,7 @@ const buildLineItems = async (orderItems) => {
         publicId: p.images?.[0]?.publicId || "imported",
       },
       quantity: qty,
-      price,
+      price: p.salePrice,
     };
   });
 
@@ -157,8 +140,6 @@ const decrementStockInSession = async (items, session) => {
     if (!updated) throw new AppError("Không đủ hàng trong kho", 400, "INSUFFICIENT_STOCK");
   }
 };
-
-// ─── COD ──────────────────────────────────────────────────────────────────────
 
 export const placeOrder = async (req, res) => {
   requireEmailVerified(req.user);
@@ -226,8 +207,6 @@ export const placeOrder = async (req, res) => {
   ApiResponse.created({ orderId: newOrderId, welcomeDiscount: usedWelcome }, "Ordered successfully").send(res);
 };
 
-// ─── Stripe ───────────────────────────────────────────────────────────────────
-
 export const placeOrderStripe = async (req, res) => {
   requireEmailVerified(req.user);
 
@@ -286,7 +265,9 @@ export const placeOrderStripe = async (req, res) => {
     line_items: stripeLineItems,
   });
 
-  ApiResponse.created({ session_url: stripeSession.url }, "Stripe session created").send(res);
+  ApiResponse
+    .created({ session_url: stripeSession.url }, "Stripe session created")
+    .send(res);
 };
 
 // ─── MoMo ─────────────────────────────────────────────────────────────────────
