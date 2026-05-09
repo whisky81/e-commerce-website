@@ -64,13 +64,13 @@ export const products = async (req, res) => {
     // for (const product of products) delete product.images;
 
     ApiResponse.paginated(products, {
-        optional: {
-            filters: { categories: _categories.sort(), brands: _brands.sort() },
-            banner: banner ? { name: banner.name, url: banner.url } : null
-        },
         page,
         limit,
-        total
+        total,
+        optional: {
+            filters: { categories: _categories.sort(), brands: _brands.sort() },
+            banner: banner ? { name: banner.name, url: banner.url } : null,
+        },
     }).send(res);
 };
 
