@@ -51,6 +51,12 @@ const orderSchema = new mongoose.Schema(
     },
     welcomeDiscount: { type: Boolean, default: false },
     welcomeDiscountAmount: { type: Number, default: 0 },
+    // true nếu đơn hàng được tạo từ cart → verify handler sẽ clear cart sau khi thanh toán thành công
+    // false nếu đặt từ custom orderItems trong body → không xóa cart
+    fromCart: { type: Boolean, default: false },
+    itemsPrice:    { type: Number, default: 0 },
+    shippingPrice: { type: Number, default: 0 },
+    totalPrice:    { type: Number, default: 0 },
   },
   { timestamps: true }
 );

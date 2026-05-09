@@ -218,7 +218,7 @@ export const placeOrderStripe = async (req, res) => {
   const address = req.user.addresses.id(addressId);
   if (!address) throw new NotFoundError("Address");
 
-  const { items: resolvedItems } = resolveOrderItems(rawItems, req.user.cart);
+  const { items: resolvedItems, fromCart } = resolveOrderItems(rawItems, req.user.cart);
   if (!resolvedItems.length) throw new AppError("Giỏ hàng trống", 400, "EMPTY_CART");
 
   const { itemsPrice, lineItems } = await buildLineItems(resolvedItems);
@@ -238,6 +238,7 @@ export const placeOrderStripe = async (req, res) => {
     shippingPrice: SHIPPING_PRICE,
     totalPrice: itemsPrice + SHIPPING_PRICE,
     paymentMethod: "stripe",
+    fromCart,
   });
 
   const stripeLineItems = lineItems.map((item) => ({
@@ -283,7 +284,7 @@ export const placeOrderMoMo = async (req, res) => {
   const address = req.user.addresses.id(addressId);
   if (!address) throw new NotFoundError("Address");
 
-  const { items: resolvedItems } = resolveOrderItems(rawItems, req.user.cart);
+  const { items: resolvedItems, fromCart } = resolveOrderItems(rawItems, req.user.cart);
   if (!resolvedItems.length) throw new AppError("Giỏ hàng trống", 400, "EMPTY_CART");
 
   const { itemsPrice, lineItems } = await buildLineItems(resolvedItems);
@@ -303,6 +304,7 @@ export const placeOrderMoMo = async (req, res) => {
     shippingPrice: SHIPPING_PRICE,
     totalPrice: itemsPrice + SHIPPING_PRICE,
     paymentMethod: "momo",
+    fromCart,
   });
 
   const { origin } = req.headers;
@@ -335,7 +337,7 @@ export const placeOrderVNPay = async (req, res) => {
   const address = req.user.addresses.id(addressId);
   if (!address) throw new NotFoundError("Address");
 
-  const { items: resolvedItems } = resolveOrderItems(rawItems, req.user.cart);
+  const { items: resolvedItems, fromCart } = resolveOrderItems(rawItems, req.user.cart);
   if (!resolvedItems.length) throw new AppError("Giỏ hàng trống", 400, "EMPTY_CART");
 
   const { itemsPrice, lineItems } = await buildLineItems(resolvedItems);
@@ -355,6 +357,7 @@ export const placeOrderVNPay = async (req, res) => {
     shippingPrice: SHIPPING_PRICE,
     totalPrice: itemsPrice + SHIPPING_PRICE,
     paymentMethod: "vnpay",
+    fromCart,
   });
 
   const { origin } = req.headers;
@@ -394,7 +397,10 @@ export const verifyStripe = async (req, res) => {
         order.paidAt = new Date();
         order.status = "confirmed";
         await order.save({ session });
-        await User.findByIdAndUpdate(req.user._id, { cart: [] }, { session });
+        // Chỉ clear cart nếu đơn hàng được đặt từ cart (không xóa cart khi user mua nhanh qua custom items)
+        if (order.fromCart) {
+          await User.findByIdAndUpdate(req.user._id, { cart: [] }, { session });
+        }
       });
     } finally {
       session.endSession();
@@ -434,7 +440,10 @@ export const verifyMoMoIPN = async (req, res) => {
         order.paidAt = new Date();
         order.status = "confirmed";
         await order.save({ session });
-        await User.findByIdAndUpdate(order.user, { cart: [] }, { session });
+        // Chỉ clear cart nếu đơn hàng được đặt từ cart
+        if (order.fromCart) {
+          await User.findByIdAndUpdate(order.user, { cart: [] }, { session });
+        }
       });
     } finally {
       session.endSession();
@@ -473,7 +482,10 @@ export const verifyVNPayReturn = async (req, res) => {
         order.paidAt = new Date();
         order.status = "confirmed";
         await order.save({ session });
-        await User.findByIdAndUpdate(order.user, { cart: [] }, { session });
+        // Chỉ clear cart nếu đơn hàng được đặt từ cart
+        if (order.fromCart) {
+          await User.findByIdAndUpdate(order.user, { cart: [] }, { session });
+        }
       });
     } finally {
       session.endSession();
