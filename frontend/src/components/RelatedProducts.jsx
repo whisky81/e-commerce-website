@@ -1,18 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import useShopContext from '../hooks/useShopContext'
 import Title from "./Title"
 import ProductItem from "./ProductItem"
 
 const RelatedProducts = ({ category, brand }) => {
     const { products } = useShopContext();
-    const [relatedProducts, setRelatedProducts] = useState([]);
-
-    useEffect(() => {
-        if (products.length === 0) return;
-        const filtered = products
+    const relatedProducts = React.useMemo(() => {
+        if (!products || products.length === 0) return [];
+        return products
             .filter(item => item.category === category && item.brand === brand)
             .slice(0, 5);
-        setRelatedProducts(filtered);
     }, [products, category, brand]);
 
     return (

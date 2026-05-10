@@ -2,23 +2,13 @@ import React from 'react'
 import useShopContext from '../hooks/useShopContext'
 import { assets } from '../assets/assets';
 import { useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-
 const SearchBar = () => {
     const {
         search, setSearch,
         showSearch, setShowSearch
     } = useShopContext();
     const location = useLocation();
-    const [visible, setVisible] = useState(false);
-    
-    useEffect(() => {
-        if (location.pathname.includes('collection')) {
-            setVisible(true);
-        } else {
-            setVisible(false);
-        }
-    }, [location]);
+    const visible = location.pathname.includes('collection');
 
     if (!showSearch || !visible) return null;
 

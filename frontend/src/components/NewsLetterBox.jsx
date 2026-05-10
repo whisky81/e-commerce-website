@@ -16,7 +16,7 @@ const NewsLetterBox = () => {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      const res = await axios.post(`${backendUrl}/api/v2/subscribers`, {
+      const res = await axios.post(`${backendUrl}/api/subscribers`, {
         email: email.trim(),
         name:  name.trim(),
       });

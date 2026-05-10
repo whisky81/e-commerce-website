@@ -8,11 +8,11 @@ import useShopContext from "../hooks/useShopContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import ProductRow from "../components/ProductRow";
-import MapAddressPicker from "../components/MapAddressPicker";
+import AddressForm from "../components/AddressForm";
 
 const EMPTY_ADDR = {
   fullName: "", phone: "", street: "", ward: "",
-  district: "", province: "", lat: null, lng: null, placeId: null,
+  province: "", lat: null, lng: null, placeId: null,
 };
 
 const PlaceOrder = () => {
@@ -26,8 +26,6 @@ const PlaceOrder = () => {
   const [selectedAddress,    setSelectedAddress]    = useState(null);
   const [showAddressPopup,   setShowAddressPopup]   = useState(false);
   const [showAddAddressForm, setShowAddAddressForm] = useState(false);
-  const [newAddress,         setNewAddress]         = useState(EMPTY_ADDR);
-  const [showMap,            setShowMap]            = useState(false);
   const [placing,            setPlacing]            = useState(false);
 
   useEffect(() => {
@@ -37,20 +35,13 @@ const PlaceOrder = () => {
     }
   }, [user]);
 
-  const addAddr = async () => {
-    const { fullName, phone, street, ward, district, province } = newAddress;
-    if (!fullName || !phone || !street || !ward || !district || !province) {
-      toast.warning("Vui lòng điền đầy đủ thông tin bắt buộc");
-      return;
-    }
+  const handleAddAddress = async (formData) => {
     try {
-      const res = await axios.post(backendUrl + "/api/v2/users/addresses", newAddress, { withCredentials: true });
+      const res = await axios.post(backendUrl + "/api/users/addresses", formData, { withCredentials: true });
       if (!res.data.success) throw new Error(res.data.message);
       toast.success("Đã thêm địa chỉ mới");
-      setNewAddress(EMPTY_ADDR);
       setShowAddAddressForm(false);
       setShowAddressPopup(false);
-      setShowMap(false);
       await my();
     } catch (error) {
       toast.error(error.message);
@@ -63,20 +54,20 @@ const PlaceOrder = () => {
     setPlacing(true);
 
     // Only order the selected items
-    const orderItems = selectedCartItems.map(item => ({
-      product:  item.id,
-      quantity: item.quantity,
-    }));
+    const shippingAddress = {
+      fullName: selectedAddress.fullName,
+      phone:    selectedAddress.phone,
+      street:   selectedAddress.street,
+      ward:     selectedAddress.ward,
+      province: selectedAddress.province,
+    };
+    const orderItems = selectedCartItems.map(item => ({ product: item.id, quantity: item.quantity }));
 
     try {
       let response;
 
       if (method === "cod") {
-        response = await axios.post(
-          backendUrl + "/api/v2/orders/place",
-          { addressId: selectedAddress._id, orderItems },
-          { withCredentials: true }
-        );
+        response = await axios.post(backendUrl + "/api/orders/place", { shippingAddress, orderItems }, { withCredentials: true });
         if (response.status === 401) { navigate("/login"); return; }
         if (!response.data.success) {
           if (response.data.code === "EMAIL_NOT_VERIFIED")
@@ -90,11 +81,7 @@ const PlaceOrder = () => {
         navigate("/orders");
 
       } else if (method === "stripe") {
-        response = await axios.post(
-          backendUrl + "/api/v2/orders/stripe",
-          { addressId: selectedAddress._id, orderItems },
-          { withCredentials: true }
-        );
+        response = await axios.post(backendUrl + "/api/orders/stripe", { shippingAddress, orderItems }, { withCredentials: true });
         if (!response.data.success) {
           if (response.data.code === "EMAIL_NOT_VERIFIED")
             toast.error("⚠️ Vui lòng xác nhận email trước khi đặt hàng.");
@@ -106,7 +93,7 @@ const PlaceOrder = () => {
 
       } else if (method === "momo") {
         response = await axios.post(
-          backendUrl + "/api/v2/orders/momo",
+          backendUrl + "/api/orders/momo",
           { addressId: selectedAddress._id, orderItems },
           { withCredentials: true }
         );
@@ -121,7 +108,7 @@ const PlaceOrder = () => {
 
       } else if (method === "vnpay") {
         response = await axios.post(
-          backendUrl + "/api/v2/orders/vnpay",
+          backendUrl + "/api/orders/vnpay",
           { addressId: selectedAddress._id, orderItems },
           { withCredentials: true }
         );
@@ -171,14 +158,14 @@ const PlaceOrder = () => {
                   <p className="font-bold" style={{ color: "#1E1B4B" }}>{selectedAddress.fullName}</p>
                   <p className="text-sm mt-0.5" style={{ color: "#4F46E5" }}>{selectedAddress.phone}</p>
                   <p className="text-sm mt-1 text-gray-600">
-                    {selectedAddress.street}, {selectedAddress.ward}, {selectedAddress.district}, {selectedAddress.province}
+                    {selectedAddress.street}, {selectedAddress.ward}, {selectedAddress.province}
                   </p>
                   {selectedAddress.lat && selectedAddress.lng && (
-                    <a href={`https://www.google.com/maps?q=${selectedAddress.lat},${selectedAddress.lng}`}
+                    <a href={`https://www.openstreetmap.org/?mlat=${selectedAddress.lat}&mlon=${selectedAddress.lng}#map=16/${selectedAddress.lat}/${selectedAddress.lng}`}
                       target="_blank" rel="noopener noreferrer"
                       className="text-xs mt-1.5 inline-flex items-center gap-1 hover:underline"
                       style={{ color: "#6366F1" }}>
-                      📍 Xem trên Google Maps
+                      📍 Xem trên bản đồ
                     </a>
                   )}
                 </div>
@@ -291,7 +278,7 @@ const PlaceOrder = () => {
                 {showAddAddressForm ? "➕ Thêm địa chỉ mới" : "📍 Chọn địa chỉ giao hàng"}
               </h3>
               <button type="button"
-                onClick={() => { setShowAddressPopup(false); setShowAddAddressForm(false); setShowMap(false); }}
+                onClick={() => { setShowAddressPopup(false); setShowAddAddressForm(false); }}
                 className="w-8 h-8 rounded-full hover:bg-indigo-100 transition-colors flex items-center justify-center text-gray-500 text-xl">
                 ×
               </button>
@@ -323,7 +310,7 @@ const PlaceOrder = () => {
                               </div>
                               <p className="text-sm text-gray-500 mt-0.5">{address.phone}</p>
                               <p className="text-sm text-gray-500 mt-0.5">
-                                {address.street}, {address.ward}, {address.district}, {address.province}
+                                {address.street}, {address.ward}, {address.province}
                               </p>
                             </div>
                             {selectedAddress?._id === address._id && (
@@ -346,64 +333,21 @@ const PlaceOrder = () => {
                   </button>
                 </>
               ) : (
-                <div className="space-y-4">
-                  <button type="button" onClick={() => setShowMap(v => !v)}
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
-                    style={{ background: showMap ? "#4F46E5" : "#EEF2FF", color: showMap ? "#fff" : "#4F46E5", border: "1.5px solid #DDD6FE" }}>
-                    🗺️ {showMap ? "Ẩn bản đồ" : "Chọn vị trí trên Google Maps"}
-                  </button>
-
-                  {showMap && (
-                    <div className="space-y-2">
-                      <MapAddressPicker value={newAddress} onChange={fields => setNewAddress(prev => ({ ...prev, ...fields }))} />
-                      <p className="text-xs p-2 rounded-lg" style={{ background: "#EEF2FF", color: "#4F46E5" }}>
-                        💡 Địa chỉ được tự động điền từ bản đồ. Bạn có thể chỉnh sửa bên dưới.
-                      </p>
-                    </div>
-                  )}
-
-                  {[
-                    ["fullName", "Họ và tên *",          "text", "Nguyễn Văn A"],
-                    ["phone",    "Số điện thoại *",       "tel",  "0901234567"],
-                    ["street",   "Số nhà, tên đường *",   "text", "123 Đường ABC"],
-                    ["ward",     "Phường/Xã *",           "text", "Phường 1"],
-                    ["district", "Quận/Huyện *",          "text", "Quận 1"],
-                    ["province", "Tỉnh/Thành phố *",      "text", "TP. Hồ Chí Minh"],
-                  ].map(([name, label, type, placeholder]) => (
-                    <div key={name}>
-                      <label className="text-xs font-semibold mb-1 block" style={{ color: "#4F46E5" }}>{label}</label>
-                      <input
-                        type={type} value={newAddress[name] || ""} placeholder={placeholder}
-                        onChange={e => setNewAddress(prev => ({ ...prev, [name]: e.target.value }))}
-                        className="w-full px-3 py-2.5 text-sm rounded-xl outline-none"
-                        style={{ border: "1.5px solid #DDD6FE", background: "#FAFAFF" }}
-                      />
-                    </div>
-                  ))}
-                </div>
+                <AddressForm 
+                  onSubmit={handleAddAddress}
+                  onCancel={() => setShowAddAddressForm(false)}
+                />
               )}
             </div>
 
-            <div className="border-t p-4 flex justify-end gap-3" style={{ background: "#F9FAFB" }}>
-              {showAddAddressForm ? (
-                <>
-                  <button type="button" onClick={() => { setShowAddAddressForm(false); setShowMap(false); }}
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100">
-                    Quay lại
-                  </button>
-                  <button type="button" onClick={addAddr}
-                    className="px-5 py-2 rounded-xl text-sm font-bold text-white hover:opacity-90"
-                    style={{ background: "linear-gradient(135deg,#4F46E5,#7C3AED)" }}>
-                    Lưu địa chỉ
-                  </button>
-                </>
-              ) : (
+            {!showAddAddressForm && (
+              <div className="border-t p-4 flex justify-end gap-3" style={{ background: "#F9FAFB" }}>
                 <button type="button" onClick={() => setShowAddressPopup(false)}
                   className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100">
                   Đóng
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

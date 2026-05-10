@@ -7,22 +7,20 @@ import { Link } from "react-router-dom";
 
 const Cart = () => {
   const { cartItems, updateQuantity, navigate } = useShopContext();
-  const [cartData, setCartData]         = useState([]);
+  const cartData = React.useMemo(() => Object.values(cartItems), [cartItems]);
   const [selectedItems, setSelectedItems] = useState(new Set());
 
   useEffect(() => {
-    const tempData = Object.values(cartItems);
-    setCartData(tempData);
     // Auto-select tất cả khi cart thay đổi, nhưng giữ lại các item đang được chọn
     setSelectedItems(prev => {
-      if (prev.size === 0 && tempData.length > 0) {
-        return new Set(tempData.map(item => item.id));
+      if (prev.size === 0 && cartData.length > 0) {
+        return new Set(cartData.map(item => item.id));
       }
       // Loại bỏ những item đã bị xóa khỏi cart
-      const validIds = new Set(tempData.map(item => item.id));
+      const validIds = new Set(cartData.map(item => item.id));
       return new Set([...prev].filter(id => validIds.has(id)));
     });
-  }, [cartItems]);
+  }, [cartData]);
 
   const toggleSelectItem = (productId) => {
     setSelectedItems(prev => {

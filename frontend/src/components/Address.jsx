@@ -15,7 +15,6 @@ const Address = ({
         const parts = [
             address.street,
             address.ward,
-            address.district,
             address.province
         ].filter(Boolean);
         return parts.join(', ');
@@ -82,7 +81,6 @@ const Address = ({
             {showFullInfo && (
                 <div className="bg-gray-50 p-3 rounded-md text-sm mb-3 space-y-1">
                     <p><span className="font-medium">Tỉnh/Thành phố:</span> {address.province}</p>
-                    <p><span className="font-medium">Quận/Huyện:</span> {address.district}</p>
                     <p><span className="font-medium">Phường/Xã:</span> {address.ward}</p>
                     <p><span className="font-medium">Đường/Thôn:</span> {address.street}</p>
                 </div>

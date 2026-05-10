@@ -1,44 +1,22 @@
-import React from 'react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { assets } from '../assets/assets'
 import { NavLink, Link } from 'react-router-dom'
 import useShopContext from '../hooks/useShopContext'
-import { toast } from 'react-toastify'
-import axios from 'axios'
-
+import { useAuth } from '../hooks/useAuth'
 const NavBar = () => {
     const [visible, setVisible] = useState(false);
     const {
         setShowSearch,
         cartCount,
         navigate,
-        setCartItems,
         isAuthenticated,
-        setIsAuthenticated,
-        backendUrl,
         favoriteIds
     } = useShopContext();
 
-    const logout = async () => {
-        try {
-            const response = await axios.post(
-                backendUrl + "/api/v2/auth/logout",
-                {},
-                { withCredentials: true }
-            )
+    const { logout } = useAuth();
 
-            if (!response.data.success) {
-                throw new Error(response.data.message || "Logout failed")
-
-            }
-            toast.success(response.data.message)
-            localStorage.removeItem("isAuth");
-            setIsAuthenticated(false);
-            setCartItems({});
-            navigate("/login");
-        } catch (error) {
-            toast.error(error.message);
-        }
+    const handleLogout = () => {
+        logout();
     }
 
     return (
@@ -116,7 +94,7 @@ const NavBar = () => {
                                     </p>
                                     <hr className='border-slate-600 my-1' />
                                     <p 
-                                        onClick={logout} 
+                                        onClick={handleLogout} 
                                         className='cursor-pointer hover:text-red-400 transition-colors py-1 text-red-300'
                                     >
                                         🚪 Đăng xuất
@@ -150,7 +128,7 @@ const NavBar = () => {
                             <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m10-9l2 9m-9 0h18m-18 0a2 2 0 11-4 0 2 2 0 014 0zm12 0a2 2 0 11-4 0 2 2 0 014 0z' />
                         </svg>
                         <span className='absolute -top-2 -right-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold'>
-                            {cartCount()}
+                            {cartCount}
                         </span>
                     </Link>
 

@@ -19,10 +19,7 @@ const Favorites = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(
-          `${backendUrl}/api/v2/users/favorites`,
-          { withCredentials: true }
-        );
+        const res = await axios.get(`${backendUrl}/api/users/favorites`, { withCredentials: true });
         if (res.data.success) {
           setItems(res.data.data || []);
         }

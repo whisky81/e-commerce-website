@@ -91,7 +91,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
             if (newReview.media[1]) formData.append("media2", newReview.media[1]);
 
             let response = await axios.post(
-                backendUrl + "/api/v2/reviews",
+                backendUrl + "/api/reviews",
                 formData,
                 { withCredentials: true }
             );
@@ -99,11 +99,11 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                 throw new Error(response.data.message);
             }
             response = await axios.get(
-                backendUrl + `/api/v2/products/${productId}/reviews`,
+                backendUrl + `/api/products/${productId}`,
                 { withCredentials: true }
             );
             if (response.data.success) {
-                setReviews(response.data.data);
+                setReviews(response.data.data.reviews || response.data.data);
             }
             setNewReview({ rating: 0, comment: '', media: [] });
             setShowReviewForm(false);

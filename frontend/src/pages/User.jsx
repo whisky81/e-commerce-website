@@ -3,10 +3,56 @@ import { useEffect, useState } from "react";
 import useShopContext from "../hooks/useShopContext";
 import { toast } from "react-toastify";
 import axios from "axios";
+import AddressForm from "../components/AddressForm";
 
 const User = () => {
   const { user, navigate, isAuthenticated, backendUrl, my } = useShopContext();
   const [uploading, setUploading] = useState(false);
+
+  // Modal State
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+
+  const openAddAddress = () => {
+    setEditingAddress(null);
+    setShowAddressModal(true);
+  };
+
+  const openEditAddress = (addr) => {
+    setEditingAddress(addr);
+    setShowAddressModal(true);
+  };
+
+  const closeAddressModal = () => {
+    setShowAddressModal(false);
+    setEditingAddress(null);
+  };
+
+  const saveAddress = async (formData) => {
+    try {
+      if (editingAddress) {
+        const response = await axios.put(
+          `${backendUrl}/api/users/addresses/${editingAddress._id}`,
+          formData,
+          { withCredentials: true }
+        );
+        if (!response.data.success) throw new Error(response.data.message);
+        toast.success("Cập nhật địa chỉ thành công");
+      } else {
+        const response = await axios.post(
+          `${backendUrl}/api/users/addresses`,
+          formData,
+          { withCredentials: true }
+        );
+        if (!response.data.success) throw new Error(response.data.message);
+        toast.success("Thêm địa chỉ thành công");
+      }
+      closeAddressModal();
+      await my();
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "Có lỗi xảy ra");
+    }
+  };
 
   // ─── Upload avatar ─────────────────────────────────────────────────────────
   const handleAvatarUpload = async (e) => {
@@ -24,7 +70,7 @@ const User = () => {
     try {
       const form = new FormData();
       form.append("avatar", file);
-      const res = await axios.post(`${backendUrl}/api/v2/users/avatar`, form, { withCredentials: true });
+      const res = await axios.post(`${backendUrl}/api/users/avatar`, form, { withCredentials: true });
       if (res.data.success) {
         toast.success("Cập nhật ảnh đại diện thành công");
         await my();
@@ -40,8 +86,8 @@ const User = () => {
   const deleteAddr = async (id) => {
     try {
       const response = await axios.delete(
-        backendUrl + `/api/v2/users/addresses/${id}`,
-        { withCredentials: true }
+        backendUrl + `/api/users/addresses`,
+        { data: { bulk: [id] }, withCredentials: true }
       );
       if (!response.data.success) throw new Error(response.data.message);
       toast.success(response.data.message);
@@ -159,9 +205,14 @@ const User = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-800 to-indigo-900 px-6 py-4 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-white">Địa chỉ của tôi</h2>
-            <span className="bg-white text-indigo-700 px-3 py-0.5 rounded-full text-sm font-semibold">
-              {user.addresses.length} địa chỉ
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="bg-white text-indigo-700 px-3 py-0.5 rounded-full text-sm font-semibold">
+                {user.addresses.length} địa chỉ
+              </span>
+              <button onClick={openAddAddress} className="bg-indigo-600 text-white px-3 py-1 rounded-full text-sm font-medium hover:bg-indigo-500 transition shadow-sm border border-indigo-400">
+                + Thêm mới
+              </button>
+            </div>
           </div>
 
           <div className="p-6">
@@ -194,7 +245,7 @@ const User = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                       <p className="text-sm">
-                        {addr.street}, {addr.ward}, {addr.district}, {addr.province}
+                        {addr.street}, {addr.ward}, {addr.province}
                       </p>
                     </div>
 
@@ -207,6 +258,11 @@ const User = () => {
                     )}
 
                     <div className="flex gap-3 mt-4 pt-3 border-t border-gray-100">
+                      <button
+                        onClick={() => openEditAddress(addr)}
+                        className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+                        ✏️ Sửa
+                      </button>
                       <button
                         onClick={() => deleteAddr(addr._id)}
                         className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">
@@ -229,6 +285,28 @@ const User = () => {
             )}
           </div>
         </div>
+        {/* Modal Thêm/Sửa địa chỉ */}
+        {showAddressModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden mt-10 mb-10 relative">
+              <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 className="text-xl font-bold">{editingAddress ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}</h3>
+                <button onClick={closeAddressModal} className="text-gray-400 hover:text-gray-600">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-6">
+                <AddressForm 
+                  initialData={editingAddress}
+                  onSubmit={saveAddress}
+                  onCancel={closeAddressModal}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

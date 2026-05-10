@@ -14,7 +14,7 @@ const EmailVerificationBanner = () => {
     const resend = async () => {
         setSending(true)
         try {
-            const res = await axios.post(backendUrl + '/api/v2/auth/resend-verification', {}, { withCredentials: true })
+            const res = await axios.post(backendUrl + '/api/auth/resend-verification', {}, { withCredentials: true })
             if (res.data.success) toast.success(res.data.message)
             else throw new Error(res.data.message)
         } catch (e) {

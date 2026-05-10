@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import useShopContext from "../hooks/useShopContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 const VerifyEmail = () => {
   const [searchParams]  = useSearchParams();
-  const { backendUrl, my } = useShopContext();
+  const { backendUrl } = useShopContext();
+  const queryClient = useQueryClient();
   const [status,  setStatus]  = useState("loading"); // loading | success | error
   const [message, setMessage] = useState("");
 
@@ -31,7 +33,7 @@ const VerifyEmail = () => {
 
     axios
       .get(
-        `${backendUrl}/api/v2/auth/verify-email?token=${encodeURIComponent(token)}`,
+        `${backendUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`,
         { signal: controller.signal }
       )
       .then(res => {
@@ -39,7 +41,7 @@ const VerifyEmail = () => {
           setStatus("success");
           setMessage(res.data.message);
           // Refresh user state if the user is already logged in
-          try { my(); } catch {}
+          try { queryClient.invalidateQueries({ queryKey: ['profile'] }); } catch { /* ignore */ }
         } else {
           setStatus("error");
           setMessage(res.data.message || "Xác nhận thất bại. Vui lòng thử lại.");

@@ -64,10 +64,6 @@ const addressSchema = new mongoose.Schema(
       type: String,
       default: null,
       trim: true
-    },
-    district: {
-      type: String,
-      default: null
     }
   },
   {

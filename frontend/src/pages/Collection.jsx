@@ -1,16 +1,15 @@
 // frontend/src/pages/Collection.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import useShopContext from '../hooks/useShopContext'
-import { assets } from '../assets/assets'
 import Title from '../components/Title'
 import ProductItem from '../components/ProductItem'
-import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
+import { useProducts } from '../hooks/useProducts'
 
 const PAGE_SIZE = 12
 
 const Collection = () => {
-  const { search, showSearch, backendUrl } = useShopContext()
+  const { search, showSearch } = useShopContext()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [showFilter, setShowFilter]   = useState(false)
@@ -18,12 +17,6 @@ const Collection = () => {
   const [brands,     setBrands]       = useState([])
   const [sortType,   setSortType]     = useState('relavent')
   const [debouncedSearch, setDebouncedSearch] = useState(search)
-
-  const [items,         setItems]         = useState([])
-  const [filterOptions, setFilterOptions] = useState({ categories: [], brands: [] })
-  const [loading,       setLoading]       = useState(true)
-  const [totalPages,    setTotalPages]    = useState(1)
-  const [total,         setTotal]         = useState(0)
 
   // ─── Pagination: read from URL ──────────────────────────────────────────────
   const page = Math.max(1, Number(searchParams.get('page')) || 1)
@@ -56,37 +49,21 @@ const Collection = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterKey])
 
-  // ─── Fetch products ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const controller = new AbortController()
-    const load = async () => {
-      setLoading(true)
-      try {
-        const sortParam = sortType === 'low-high' ? 'price' : sortType === 'high-low' ? '-price' : undefined
-        const params = { page, limit: PAGE_SIZE }
-        if (category.length) params.categories = category.join(',')
-        if (brands.length)   params.brands     = brands.join(',')
-        if (sortParam)       params.sort       = sortParam
-        if (showSearch && debouncedSearch.trim()) params.search = debouncedSearch.trim()
+  // ─── Fetch products via React Query ─────────────────────────────────────────
+  const sortParam = sortType === 'low-high' ? 'price' : sortType === 'high-low' ? '-price' : undefined;
+  
+  const queryParams = { page, limit: PAGE_SIZE };
+  if (category.length) queryParams.categories = category.join(',');
+  if (brands.length)   queryParams.brands     = brands.join(',');
+  if (sortParam)       queryParams.sort       = sortParam;
+  if (showSearch && debouncedSearch.trim()) queryParams.search = debouncedSearch.trim();
 
-        const { data: res } = await axios.get(`${backendUrl}/api/v2/products`, {
-          params, signal: controller.signal, withCredentials: true,
-        })
-        if (res.success) {
-          setItems(res.data || [])
-          setTotalPages(res.totalPages || 1)
-          setTotal(res.total ?? 0)
-          if (res.filters) setFilterOptions(res.filters)
-        }
-      } catch (e) {
-        if (e.name !== 'CanceledError' && e.code !== 'ERR_CANCELED') console.error(e)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-    return () => controller.abort()
-  }, [backendUrl, page, category, brands, sortType, debouncedSearch, showSearch])
+  const { data: productsData, isLoading: loading } = useProducts(queryParams);
+
+  const items = productsData?.items || [];
+  const filterOptions = productsData?.filters || { categories: [], brands: [] };
+  const totalPages = productsData?.totalPages || 1;
+  const total = productsData?.total || 0;
 
   const toggleCategory = (v) => setCategory(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
   const toggleBrands   = (v) => setBrands  (prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])

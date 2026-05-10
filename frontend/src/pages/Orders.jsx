@@ -24,7 +24,7 @@ const Orders = () => {
     try {
       setLoading(true);
       if (!isAuthenticated) { navigate("/login"); return; }
-      const response = await axios.get(backendUrl + "/api/v2/orders/my", { withCredentials: true });
+      const response = await axios.get(backendUrl + "/api/orders/me", { withCredentials: true });
       if (response.status === 401) { navigate("/login"); return; }
       if (!response.data.success) throw new Error(response.data.message);
       setOrders(response.data.data);
@@ -42,11 +42,7 @@ const Orders = () => {
     if (!window.confirm("Bạn chắc chắn muốn hủy đơn hàng này?")) return;
     setCancelling(orderId);
     try {
-      const res = await axios.patch(
-        `${backendUrl}/api/v2/orders/${orderId}/cancel`,
-        {},
-        { withCredentials: true }
-      );
+      const res = await axios.patch(`${backendUrl}/api/orders/${orderId}/cancel`, {}, { withCredentials: true });
       if (res.data.success) {
         toast.success(res.data.message);
         fetchOrdersData();
@@ -63,11 +59,7 @@ const Orders = () => {
     if (!supportMsg.trim()) { toast.warning("Vui lòng nhập nội dung hỗ trợ"); return; }
     setSendingSupport(true);
     try {
-      const res = await axios.post(
-        `${backendUrl}/api/v2/orders/${supportOrder._id}/contact`,
-        { message: supportMsg },
-        { withCredentials: true }
-      );
+      const res = await axios.post(`${backendUrl}/api/orders/${supportOrder._id}/contact`, { message: supportMsg }, { withCredentials: true });
       if (res.data.success) {
         toast.success(res.data.message);
         setSupportOrder(null);
