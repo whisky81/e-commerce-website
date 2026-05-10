@@ -1,12 +1,11 @@
-// admin/src/pages/Stats.jsx
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { backendUrl } from "../App";
+import { fetchStats } from "../api/stats";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { Package, DollarSign, ShoppingBag, Users, AlertTriangle, TrendingUp, CreditCard, Clock, CheckCircle2 } from 'lucide-react';
 
 const fmt = (n) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n || 0);
@@ -18,20 +17,18 @@ const fmtShort = (n) => {
   return String(n);
 };
 
-const StatCard = ({ label, value, sub, gradient, icon }) => (
-  <div
-    className="rounded-2xl p-5 text-white relative overflow-hidden"
-    style={{ background: gradient }}
-  >
-    <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-20 bg-white" />
-    <div className="flex items-start justify-between">
+const StatCard = ({ label, value, sub, bgClass, icon: Icon }) => (
+  <div className={`rounded-2xl p-5 text-white relative overflow-hidden ${bgClass}`}>
+    <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-20 bg-white" />
+    <div className="absolute -left-4 -bottom-4 w-16 h-16 rounded-full opacity-10 bg-white" />
+    <div className="flex items-start justify-between relative z-10">
       <div>
-        <p className="text-xs font-medium opacity-80 mb-1">{label}</p>
-        <p className="text-2xl font-bold leading-tight">{value}</p>
-        {sub && <p className="text-xs opacity-70 mt-1">{sub}</p>}
+        <p className="text-sm font-medium text-white/80 mb-1">{label}</p>
+        <p className="text-3xl font-bold tracking-tight">{value}</p>
+        {sub && <p className="text-xs text-white/70 mt-2 flex items-center gap-1"><TrendingUp size={12}/> {sub}</p>}
       </div>
-      <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl flex-shrink-0">
-        {icon}
+      <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
+        <Icon size={24} className="text-white" />
       </div>
     </div>
   </div>
@@ -41,16 +38,16 @@ const StatCard = ({ label, value, sub, gradient, icon }) => (
 const CustomBarTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white border border-indigo-100 rounded-xl shadow-lg p-3 text-sm">
-        <p className="font-semibold text-gray-800 mb-1 truncate max-w-48">{label}</p>
-        <p className="text-indigo-600 font-bold">{payload[0].value} đã bán</p>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-sm">
+        <p className="font-semibold text-slate-800 mb-1 truncate max-w-[200px]">{label}</p>
+        <p className="text-blue-600 font-bold">{payload[0].value} đã bán</p>
       </div>
     );
   }
   return null;
 };
 
-const PIE_COLORS = ["#F59E0B", "#3B82F6", "#8B5CF6", "#10B981", "#EF4444"];
+const PIE_COLORS = ["#F97316", "#3B82F6", "#8B5CF6", "#10B981", "#EF4444"];
 const STATUS_LABELS = {
   pending:   "Chờ xác nhận",
   confirmed: "Đã xác nhận",
@@ -66,8 +63,8 @@ const Stats = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axios.get(`${backendUrl}/api/v2/admin/stats`, { withCredentials: true });
-        if (res.data.success) setData(res.data.data);
+        const res = await fetchStats();
+        if (res.data.success) setData(res.data.data.stats);
         else throw new Error(res.data.message);
       } catch (e) {
         toast.error(e.message || "Không tải được thống kê");
@@ -80,15 +77,15 @@ const Stats = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-28 rounded-2xl" style={{ background: "#EDE9FE" }} />
+          <div key={i} className="h-32 rounded-2xl bg-slate-200" />
         ))}
       </div>
     );
   }
 
-  if (!data) return <p className="text-rose-500 text-sm">Không có dữ liệu</p>;
+  if (!data) return <div className="p-8 text-center text-slate-500">Không có dữ liệu thống kê.</div>;
 
   const { statusCounts = {} } = data;
 
@@ -104,173 +101,161 @@ const Stats = () => {
   }));
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold mb-1" style={{ color: "#1E1B4B" }}>
-          Thống kê cửa hàng
-        </h1>
-        <p className="text-sm" style={{ color: "#9CA3AF" }}>
-          Tổng quan đơn hàng, doanh thu và tồn kho
-        </p>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Thống kê cửa hàng</h1>
+        <p className="text-sm text-slate-500 mt-1">Tổng quan hoạt động kinh doanh, doanh thu và tồn kho</p>
       </div>
 
       {/* ─── KPI cards ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Đơn hàng (không hủy)"
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard label="Đơn hàng"
           value={data.orderCount.toLocaleString("vi-VN")}
-          gradient="linear-gradient(135deg,#1E1B4B,#3730A3)" icon="📦" />
+          bgClass="bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-500/30 shadow-lg" icon={Package} />
         <StatCard
-          label="Doanh thu (tất cả đơn)"
-          value={fmt(data.revenue)}
-          sub={`Đã thu: ${fmt(data.paidRevenue)}`}
-          gradient="linear-gradient(135deg,#065F46,#047857)" icon="💰" />
+          label="Tổng doanh thu"
+          value={fmtShort(data.revenue)}
+          sub={`Thực thu: ${fmtShort(data.paidRevenue)}`}
+          bgClass="bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-emerald-500/30 shadow-lg" icon={DollarSign} />
         <StatCard label="Sản phẩm"
           value={data.productCount.toLocaleString("vi-VN")}
-          gradient="linear-gradient(135deg,#4F46E5,#7C3AED)" icon="🛍️" />
+          bgClass="bg-gradient-to-br from-orange-400 to-orange-600 shadow-orange-500/30 shadow-lg" icon={ShoppingBag} />
         <StatCard label="Khách hàng"
           value={data.userCount.toLocaleString("vi-VN")}
-          gradient="linear-gradient(135deg,#92400E,#B45309)" icon="👥" />
+          bgClass="bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-indigo-500/30 shadow-lg" icon={Users} />
       </div>
 
       {/* ─── Revenue breakdown ────────────────────────────────────────────── */}
-      <div className="rounded-2xl p-6" style={{ background: "#fff", border: "1.5px solid #DDD6FE" }}>
-        <h2 className="text-base font-bold mb-4" style={{ color: "#1E1B4B" }}>💰 Chi tiết doanh thu</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <DollarSign className="text-emerald-500" /> Chi tiết doanh thu
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {[
-            { label: "Tổng doanh thu (đơn không hủy)",  value: fmt(data.revenue),     color: "#4F46E5", bg: "#EEF2FF" },
-            { label: "Đã thực thu (isPaid = true)",      value: fmt(data.paidRevenue), color: "#059669", bg: "#ECFDF5" },
-            { label: "Chờ thu (COD chưa giao)",
-              value: fmt(Math.max(0, data.revenue - data.paidRevenue)),
-              color: "#D97706", bg: "#FFFBEB" },
-          ].map(c => (
-            <div key={c.label} className="p-4 rounded-xl" style={{ background: c.bg }}>
-              <p className="text-xs font-medium mb-1" style={{ color: "#6B7280" }}>{c.label}</p>
-              <p className="text-xl font-bold" style={{ color: c.color }}>{c.value}</p>
+            { label: "Tổng doanh thu (đơn không hủy)",  value: fmt(data.revenue), icon: DollarSign, colorClass: "text-blue-600", bgClass: "bg-blue-50" },
+            { label: "Đã thực thu (Đã thanh toán)", value: fmt(data.paidRevenue), icon: CreditCard, colorClass: "text-emerald-600", bgClass: "bg-emerald-50" },
+            { label: "Chờ thu (COD chưa giao)", value: fmt(Math.max(0, data.revenue - data.paidRevenue)), icon: Clock, colorClass: "text-orange-600", bgClass: "bg-orange-50" },
+          ].map((c, idx) => (
+            <div key={idx} className={`p-5 rounded-xl ${c.bgClass} flex flex-col justify-center`}>
+              <div className="flex items-center gap-2 mb-2">
+                <c.icon size={16} className={c.colorClass} />
+                <p className="text-sm font-medium text-slate-600">{c.label}</p>
+              </div>
+              <p className={`text-2xl font-bold ${c.colorClass}`}>{c.value}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* ─── Charts row ───────────────────────────────────────────────────── */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-6">
 
         {/* Pie – Trạng thái đơn hàng */}
-        <div className="rounded-2xl p-6" style={{ background: "#fff", border: "1.5px solid #DDD6FE" }}>
-          <h2 className="text-base font-bold mb-4" style={{ color: "#1E1B4B" }}>
-            📊 Trạng thái đơn hàng
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col">
+          <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+            <Package className="text-blue-500" /> Trạng thái đơn hàng
           </h2>
-          {pieData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent }) =>
-                    percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ""
-                  }
-                >
-                  {pieData.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v, n) => [`${v} đơn`, n]} />
-                <Legend
-                  formatter={value => (
-                    <span style={{ fontSize: 11, color: "#374151" }}>{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-center text-gray-400 py-16 text-sm">Chưa có dữ liệu đơn hàng</p>
-          )}
-
-          {/* Count grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-            {[
-              { key: "pending",   label: "Chờ xác nhận", color: "#F59E0B", bg: "#FFFBEB" },
-              { key: "confirmed", label: "Đã xác nhận",  color: "#3B82F6", bg: "#EFF6FF" },
-              { key: "shipping",  label: "Đang giao",    color: "#8B5CF6", bg: "#F5F3FF" },
-              { key: "delivered", label: "Đã giao",      color: "#10B981", bg: "#ECFDF5" },
-              { key: "cancelled", label: "Đã hủy",       color: "#EF4444", bg: "#FEF2F2" },
-            ].map(s => (
-              <div key={s.key} className="p-2.5 rounded-xl text-center" style={{ background: s.bg }}>
-                <p className="text-xl font-bold" style={{ color: s.color }}>
-                  {statusCounts[s.key] ?? 0}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{s.label}</p>
+          <div className="flex-1 flex flex-col justify-center">
+            {pieData.length > 0 ? (
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                      label={({ name, percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ""}
+                    >
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v, n) => [`${v} đơn`, n]} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Legend formatter={(value) => <span className="text-sm font-medium text-slate-700">{value}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            ))}
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-slate-400 py-12">
+                Chưa có dữ liệu đơn hàng
+              </div>
+            )}
           </div>
         </div>
 
         {/* Bar – Sản phẩm bán chạy */}
-        <div className="rounded-2xl p-6" style={{ background: "#fff", border: "1.5px solid #DDD6FE" }}>
-          <h2 className="text-base font-bold mb-1" style={{ color: "#1E1B4B" }}>🏆 Sản phẩm bán chạy</h2>
-          <p className="text-xs mb-4" style={{ color: "#9CA3AF" }}>
-            Tổng đã bán:{" "}
-            <strong style={{ color: "#4F46E5" }}>
-              {(data.totalSoldUnits ?? 0).toLocaleString("vi-VN")}
-            </strong>
-          </p>
-          {barData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={barData} margin={{ top: 0, right: 8, left: -10, bottom: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EDE9FE" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 10, fill: "#6B7280" }}
-                  angle={-30}
-                  textAnchor="end"
-                  interval={0}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: "#6B7280" }}
-                  tickFormatter={fmtShort}
-                />
-                <Tooltip content={<CustomBarTooltip />} />
-                <Bar dataKey="sold" fill="#4F46E5" radius={[6, 6, 0, 0]} name="Đã bán" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-center text-gray-400 py-16 text-sm">Chưa có dữ liệu</p>
-          )}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col">
+          <div className="flex justify-between items-start mb-6">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <ShoppingBag className="text-orange-500" /> Sản phẩm bán chạy
+            </h2>
+            <div className="text-right">
+              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Tổng đã bán</p>
+              <p className="text-xl font-bold text-blue-600">{(data.totalSoldUnits ?? 0).toLocaleString("vi-VN")}</p>
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col justify-end">
+            {barData.length > 0 ? (
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={false} tickFormatter={fmtShort} />
+                    <Tooltip content={<CustomBarTooltip />} cursor={{ fill: '#F1F5F9' }} />
+                    <Bar dataKey="sold" fill="#3B82F6" radius={[6, 6, 0, 0]} maxBarSize={48} name="Đã bán" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-slate-400 py-12">
+                Chưa có dữ liệu bán hàng
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ─── Tồn kho thấp ─────────────────────────────────────────────────── */}
-      <div
-        className="rounded-2xl p-6"
-        style={{ background: "#FFFBEB", border: "1.5px solid #FDE68A" }}
-      >
-        <h2 className="text-base font-bold mb-1" style={{ color: "#92400E" }}>⚠️ Tồn kho thấp</h2>
-        <p className="text-xs mb-4" style={{ color: "#B45309" }}>
-          Ngưỡng ≤ {data.lowStockThreshold} sản phẩm
+      <div className="bg-orange-50 rounded-2xl p-6 border border-orange-200 shadow-sm">
+        <h2 className="text-lg font-bold text-orange-800 mb-2 flex items-center gap-2">
+          <AlertTriangle className="text-orange-600" /> Cảnh báo tồn kho thấp
+        </h2>
+        <p className="text-sm text-orange-600/80 mb-4 font-medium">
+          Các sản phẩm có số lượng ≤ {data.lowStockThreshold}
         </p>
-        <div className="space-y-2">
+        
+        <div className="space-y-3">
           {(data.lowStockProducts || []).length === 0 ? (
-            <p className="text-sm" style={{ color: "#92400E" }}>
-              ✅ Không có sản phẩm nào dưới ngưỡng
-            </p>
-          ) : (
-            (data.lowStockProducts || []).map(p => (
-              <div key={p._id} className="flex justify-between items-center">
-                <span className="text-sm line-clamp-1 flex-1 mr-3" style={{ color: "#78350F" }}>
-                  {p.name}
-                </span>
-                <span
-                  className={`text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0 ${
-                    p.stock === 0 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                  }`}
-                >
-                  {p.stock === 0 ? "Hết hàng" : `Còn ${p.stock}`}
-                </span>
+            <div className="bg-white p-4 rounded-xl border border-orange-100 flex items-center gap-3 text-orange-700">
+              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                <CheckCircle2 size={18} className="text-orange-600" />
               </div>
-            ))
+              <span className="font-medium">Tuyệt vời! Không có sản phẩm nào dưới ngưỡng tồn kho an toàn.</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(data.lowStockProducts || []).map(p => (
+                <div key={p._id} className="bg-white p-4 rounded-xl border border-orange-100 shadow-sm flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-slate-800 line-clamp-2" title={p.name}>
+                    {p.name}
+                  </span>
+                  <div className="flex justify-between items-center mt-auto pt-2 border-t border-slate-50">
+                    <span className="text-xs text-slate-500">Số lượng hiện tại</span>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
+                      p.stock === 0 ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"
+                    }`}>
+                      {p.stock === 0 ? "Hết hàng" : `${p.stock} sản phẩm`}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

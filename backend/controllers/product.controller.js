@@ -117,8 +117,8 @@ export const bulkImportProducts = async (req, res) => {
     const validDocs = [];
 
     for (const p of products) {
-        // Validate đủ required fields theo schema
-        if (!p.name || !p.description || !p.price || !p.category || !p.brand || !p.images) {
+        // Validate đủ required fields theo schema (đã bỏ qua images vì sẽ có fallback)
+        if (!p.name || !p.description || !p.price || !p.category || !p.brand) {
             results.skipped++;
             results.errors.push({ name: p.name || "unknown", reason: "Missing required fields" });
             continue;
@@ -132,7 +132,9 @@ export const bulkImportProducts = async (req, res) => {
         }
 
         // Normalize images — giữ publicId nếu có, fallback "imported"
-        const rawImages = Array.isArray(p.images) ? p.images : [p.images];
+        // Nếu không có ảnh, dùng ảnh mặc định vì schema bắt buộc phải có ảnh
+        const placeholderImg = "https://placehold.co/600x400/EEF2FF/4F46E5?text=Chưa+có+ảnh";
+        const rawImages = Array.isArray(p.images) ? p.images : (p.images ? [p.images] : [placeholderImg]);
         const images = rawImages
             .filter(Boolean)
             .map(img =>

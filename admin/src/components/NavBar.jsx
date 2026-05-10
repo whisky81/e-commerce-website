@@ -1,29 +1,20 @@
 import React, { useState } from 'react'
 import { assets } from "../assets/assets"
-import { backendUrl } from '../App'
-import axios from 'axios'
 import { toast } from 'react-toastify'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
-const NavBar = ({ setIsLogin }) => {
+const NavBar = ({ onLogout }) => {
+  const { logout } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  const logout = async () => {
+  const handleLogout = async () => {
     try {
       setLoading(true)
 
-      const response = await axios.post(
-        backendUrl + "/api/v2/auth/logout",
-        {},
-        { withCredentials: true }
-      )
-
-      if (response.data.success) {
-        toast.success(response.data.message)
-        setIsLogin(false)
-      } else {
-        throw new Error(response.data.message || "Logout failed")
-      }
+      await logout()
+      onLogout?.()
+      toast.success("Đã đăng xuất")
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -42,7 +33,7 @@ const NavBar = ({ setIsLogin }) => {
       </Link>
 
       <button
-        onClick={logout}
+        onClick={handleLogout}
         disabled={loading}
         className={`flex items-center gap-2 text-white px-5 py-2 sm:px-7 sm:py-2 rounded-full text-xs sm:text-sm transition
           ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-gray-600 hover:bg-gray-700"}

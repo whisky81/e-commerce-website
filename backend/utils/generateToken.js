@@ -22,7 +22,11 @@ const sendToken = (res, userId, role, statusCode, message) => {
         })
         .json({
             success: true,
-            message
+            message,
+            data: {
+                id: userId,
+                role: role
+            }
         })
 }
 

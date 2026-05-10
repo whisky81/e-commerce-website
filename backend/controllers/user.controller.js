@@ -13,6 +13,7 @@ export const profile = async (req, res) => {
   const user = {
     name: req.user.name,
     email: req.user.email,
+    role: req.user.role,
     avatar: req.user.avatar || null,
     addresses: req.user.addresses,
     favorites: req.user.favorites || [],

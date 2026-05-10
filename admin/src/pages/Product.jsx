@@ -1,8 +1,8 @@
 import { useParams } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { toast } from "react-toastify"
-import axios from "axios"
-import { backendUrl } from "../App"
+import { fetchProduct, updateProduct } from "../api/products"
+import { TableSkeleton } from "../components/ui/Skeleton"
 
 const Product = () => {
   const { productId } = useParams()
@@ -13,13 +13,10 @@ const Product = () => {
   const [saving, setSaving] = useState(false)        
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const loadProduct = async () => {
       try {
         setLoading(true)
-        const response = await axios.get(
-          backendUrl + `/api/v2/products/${productId}`,
-          { withCredentials: true }
-        )
+        const response = await fetchProduct(productId)
         if (response.data.success) {
           setProduct(response.data.data.product)
           setFormData(response.data.data.product)
@@ -32,7 +29,7 @@ const Product = () => {
         setLoading(false)
       }
     }
-    fetchProduct()
+    loadProduct()
   }, [productId])
 
   const handleChange = (e) => {
@@ -60,18 +57,10 @@ const Product = () => {
         stock: Number(formData.stock),
       }
 
-      const response = await axios.put(
-        backendUrl + `/api/v2/products/${productId}`,
-        updateData,
-        { withCredentials: true }
-      )
-
+      const response = await updateProduct(productId, updateData)
       if (response.data.success) {
         toast.success("Cập nhật thành công")
-        const r2 = await axios.get(
-          backendUrl + `/api/v2/products/${productId}`,
-          { withCredentials: true }
-        )
+        const r2 = await fetchProduct(productId)
         if (r2.data.success) {
           setProduct(r2.data.data.product)
           setFormData(r2.data.data.product)
@@ -93,13 +82,9 @@ const Product = () => {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg font-semibold animate-pulse text-gray-600">
-          Đang tải sản phẩm…
-        </div>
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center">
+      <TableSkeleton rows={4} cols={2} />
+    </div>
   }
 
   if (!product) return null
@@ -112,7 +97,7 @@ const Product = () => {
         <div className="grid md:grid-cols-2 gap-8">
           <div className="border rounded-xl p-4 flex items-center justify-center bg-gray-50">
             <img
-              src={product.images[0]}
+              src={product.images[0]?.url}
               alt={product.name}
               className="max-h-80 object-contain rounded-lg"
             />
