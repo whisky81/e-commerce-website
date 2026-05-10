@@ -220,7 +220,7 @@ export const listFavorites = async (req, res) => {
     .select("favorites")
     .populate({
       path: "favorites",
-      select: "_id name price images category brand stock soldCount discount"
+      select: "_id name price images category brand stock soldCount discount saleStartAt saleEndAt"
     })
     .lean({ virtuals: true });
   ApiResponse.success("Success", favorites).send(res);

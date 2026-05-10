@@ -25,7 +25,7 @@ const sendToken = (res, userId, role, statusCode, message) => {
             data: {
                 id: userId,
                 role: role,
-                redrectUrl: role === "admin" ? process.env.ADMIN_URL : process.env.FRONTEND_URL
+                redirectUrl: role === "admin" ? process.env.ADMIN_URL : process.env.FRONTEND_URL
             }
         })
 }

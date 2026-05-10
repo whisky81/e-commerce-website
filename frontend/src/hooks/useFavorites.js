@@ -1,12 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { addFavorite as apiAddFavorite, removeFavorite as apiRemoveFavorite } from '../api/users';
-import { useAuth } from './useAuth';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
-export const useFavorites = () => {
+export const useFavorites = (user = null, isAuthenticated = false) => {
     const queryClient = useQueryClient();
-    const { user, isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
     const favoriteIds = user?.favorites || [];
@@ -34,12 +32,11 @@ export const useFavorites = () => {
             return { previousProfile };
         },
         onError: (err, variables, context) => {
-            queryClient.setQueryData(['profile'], context.previousProfile);
+            if (context?.previousProfile) {
+                queryClient.setQueryData(['profile'], context.previousProfile);
+            }
             toast.error(err.response?.data?.message || 'Lỗi cập nhật yêu thích');
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['profile'] });
-        }
     });
 
     const toggleFavorite = (productId) => {

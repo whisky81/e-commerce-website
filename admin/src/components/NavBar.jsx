@@ -3,8 +3,10 @@ import { assets } from "../assets/assets"
 import { toast } from 'react-toastify'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useNavigate } from "react-router-dom";
 
 const NavBar = ({ onLogout }) => {
+  const navigate = useNavigate();
   const { logout } = useAuth()
   const [loading, setLoading] = useState(false)
 
@@ -15,6 +17,8 @@ const NavBar = ({ onLogout }) => {
       await logout()
       onLogout?.()
       toast.success("Đã đăng xuất")
+      const redrectUrl = import.meta.env.VITE_FRONTEND_URL;
+      if (redrectUrl) window.location.assign(redrectUrl);
     } catch (error) {
       toast.error(error.message)
     } finally {

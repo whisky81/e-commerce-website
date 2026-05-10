@@ -9,16 +9,15 @@ export const useProducts = (params = {}) => {
             if (res.data.success) {
                 return {
                     items: res.data.data,
-                    total: res.data.total,
-                    totalPages: res.data.totalPages,
-                    filters: res.data.meta?.filters || res.data.filters || {},
+                    total: res.data.meta?.total ?? 0,
+                    totalPages: res.data.meta?.totalPages ?? 1,
+                    filters: res.data.meta?.filters || {},
                     banner: res.data.meta?.banner || null,
                 };
             }
             throw new Error('Lỗi tải sản phẩm');
         },
-        staleTime: 1000 * 60 * 5, // 5 mins
-        keepPreviousData: true,
+        staleTime: 30 * 1000, // 30s — keep / and /collection soldCount in sync
     });
 };
 

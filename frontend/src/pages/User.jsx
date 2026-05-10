@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import useShopContext from "../hooks/useShopContext";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import AddressForm from "../components/AddressForm";
 
 const User = () => {
-  const { user, navigate, isAuthenticated, backendUrl, my } = useShopContext();
+  const { user, navigate, isAuthenticated, backendUrl } = useShopContext();
+  const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
 
   // Modal State
@@ -48,7 +50,7 @@ const User = () => {
         toast.success("Thêm địa chỉ thành công");
       }
       closeAddressModal();
-      await my();
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Có lỗi xảy ra");
     }
@@ -73,7 +75,7 @@ const User = () => {
       const res = await axios.post(`${backendUrl}/api/users/avatar`, form, { withCredentials: true });
       if (res.data.success) {
         toast.success("Cập nhật ảnh đại diện thành công");
-        await my();
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
       } else throw new Error(res.data.message);
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || "Upload thất bại");
@@ -91,7 +93,7 @@ const User = () => {
       );
       if (!response.data.success) throw new Error(response.data.message);
       toast.success(response.data.message);
-      await my();
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
     } catch (error) {
       toast.error(error.message);
     }
@@ -109,7 +111,7 @@ const User = () => {
     );
   }
 
-  const avatarUrl = user.avatar
+  const avatarUrl = user.avatar?.url
     || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4F46E5&color=fff&size=160&bold=true`;
 
   return (
@@ -167,7 +169,7 @@ const User = () => {
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 mt-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
-                    ⚠️ Email chưa xác nhận
+                    <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> Email chưa xác nhận
                   </span>
                 )}
               </div>
@@ -261,12 +263,12 @@ const User = () => {
                       <button
                         onClick={() => openEditAddress(addr)}
                         className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
-                        ✏️ Sửa
+                        <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> Sửa
                       </button>
                       <button
                         onClick={() => deleteAddr(addr._id)}
                         className="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">
-                        🗑️ Xóa
+                        <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Xóa
                       </button>
                     </div>
                   </div>

@@ -20,6 +20,7 @@ const Product = () => {
   const [reviews,     setReviews]     = useState([]);
   const [image,       setImage]       = useState("");
   const [activeTab,   setActiveTab]   = useState("description");
+  const [loading,     setLoading]     = useState(true);
 
   const fetchProductData = async () => {
     try {
@@ -32,17 +33,27 @@ const Product = () => {
         throw new Error(response.data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => { fetchProductData(); }, [productId]);
+  useEffect(() => {
+    // Reset state when product changes to prevent stale data flash
+    setProductData(null);
+    setReviews([]);
+    setImage("");
+    setActiveTab("description");
+    setLoading(true);
+    fetchProductData();
+  }, [productId]);
 
   const averageRating = reviews.length > 0
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : 0;
 
-  if (!productData) {
+  if (loading || !productData) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
@@ -144,10 +155,11 @@ const Product = () => {
           {/* Add to cart */}
           <button
             onClick={() => addToCart(productData._id, productData.name, productData.images[0]?.url, productData.price, productData.salePrice)}
-            className="mt-6 px-8 py-3 rounded-xl text-white font-bold transition-all hover:opacity-90 active:scale-95"
+            disabled={(productData.stock ?? 0) <= 0}
+            className="mt-6 px-8 py-3 rounded-xl text-white font-bold transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             style={{ background: "linear-gradient(135deg,#4F46E5,#7C3AED)" }}
           >
-            Thêm vào giỏ hàng
+            {(productData.stock ?? 0) <= 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
           </button>
 
           <hr className="mt-8 sm:w-4/5" />

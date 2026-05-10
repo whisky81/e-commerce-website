@@ -54,7 +54,7 @@ export const removeCartItem = async (req, res) => {
 export const userCart = async (req, res) => {
     const data = await User.findById(req.user._id)
         .select("cart")
-        .populate("cart.product", "name price images")
+        .populate("cart.product", "name price images discount saleStartAt saleEndAt")
         .lean({ virtuals: true });
     ApiResponse.success("Success", data.cart).send(res);
 }

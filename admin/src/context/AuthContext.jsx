@@ -28,7 +28,23 @@ export function AuthProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  const login = useCallback((userData) => setUser(userData), []);
+  const login = useCallback(async (loginResponseData) => {
+    // First set the minimal user data from login to trigger isAuthenticated
+    setUser(loginResponseData);
+    // Then refetch full profile to get complete user data (name, email, etc.)
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/users/profile`,
+        { withCredentials: true }
+      );
+      if (res.data.success) {
+        setUser(res.data.data);
+      }
+    } catch {
+      // Keep the minimal user data if profile refetch fails
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     await axios.post(
       `${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`,

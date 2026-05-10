@@ -120,11 +120,11 @@ function AddressForm({ onSubmit, onCancel, initialData = null }) {
 
         <div className="flex gap-2.5 justify-end mt-4">
           {onCancel && (
-            <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition">
+            <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition cursor-pointer">
               Hủy
             </button>
           )}
-          <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition">
+          <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition cursor-pointer">
             Lưu địa chỉ
           </button>
         </div>

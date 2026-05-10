@@ -121,6 +121,9 @@ const Cart = () => {
                     </p>
                     <p className="text-lg font-bold text-blue-600">
                       {productData.price.toLocaleString("vi-VN")} ₫
+                      {productData.originalPrice && (
+                        <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 ml-1 rounded font-semibold">-{productData.discount}%</span>
+                      )}
                     </p>
                     <div className="flex items-center gap-3 mt-3">
                       <div className="flex items-center border border-slate-300 rounded-lg">

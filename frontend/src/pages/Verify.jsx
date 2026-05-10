@@ -2,10 +2,11 @@ import React, { useEffect, useCallback } from 'react'
 import useShopContext from '../hooks/useShopContext'
 import { toast } from 'react-toastify'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import api from '../api/client'
 
 const Verify = () => {
-    const { setCartItems } = useShopContext()
+    const queryClient = useQueryClient()
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const success = searchParams.get('success')
@@ -16,7 +17,7 @@ const Verify = () => {
             const response = await api.post('/api/orders/verify-stripe', { orderId, success })
             if (response.data.success) {
                 toast.success(response.data.message)
-                setCartItems({})
+                queryClient.setQueryData(['cart'], {})
                 navigate('/orders')
             } else {
                 toast.error(response.data.message)
@@ -26,7 +27,7 @@ const Verify = () => {
             toast.error(error.response?.data?.message || error.message)
             navigate('/cart')
         }
-    }, [orderId, success, navigate, setCartItems])
+    }, [orderId, success, navigate, queryClient])
 
     useEffect(() => {
         verifyPayment()

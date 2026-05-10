@@ -9,7 +9,6 @@ const orderItemSchema = new mongoose.Schema(
         type: String,
         required: true
       },
-
       publicId: {
         type: String,
         required: true
@@ -51,8 +50,8 @@ const orderSchema = new mongoose.Schema(
     },
     welcomeDiscount: { type: Boolean, default: false },
     welcomeDiscountAmount: { type: Number, default: 0 },
-    // true nếu đơn hàng được tạo từ cart → verify handler sẽ clear cart sau khi thanh toán thành công
-    // false nếu đặt từ custom orderItems trong body → không xóa cart
+    // true if order created from cart -> verify handler clears cart after payment
+    // false if order placed from custom orderItems in body -> don't clear cart
     fromCart: { type: Boolean, default: false },
     itemsPrice:    { type: Number, default: 0 },
     shippingPrice: { type: Number, default: 0 },
@@ -65,13 +64,13 @@ orderSchema.virtual("orderStats").get(function () {
     let totalItemsPrice = 0;
     let totalItemsQuantity = 0;
     for (const item of this.items) {
-      totalItemsPrice += item.price;
+      totalItemsPrice += item.price * item.quantity;
       totalItemsQuantity += item.quantity;
     }
     return {
-      totalItemsPrice, 
-      totalItemsQuantity, 
-      totalPrice: totalItemsPrice + 20_000
+      totalItemsPrice,
+      totalItemsQuantity,
+      totalPrice: totalItemsPrice + (this.shippingPrice || 0),
     };
 });
 orderSchema.plugin(mongooseLeanVirtuals);

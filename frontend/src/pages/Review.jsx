@@ -12,6 +12,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
     const [showReviewForm, setShowReviewForm] = useState(false);
     const reviewsPerPage = 5;
 
+    const [submitting, setSubmitting] = useState(false);
     const [newReview, setNewReview] = useState({
         rating: 0,
         comment: '',
@@ -325,7 +326,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                         <div key={review._id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
                             <div className="flex items-start gap-3 mb-3 flex-wrap">
                                 <img
-                                    src={review.user?.avatar || assets.default_avatar}
+                                    src={review.user?.avatar?.url || assets.default_avatar}
                                     alt="avatar"
                                     className="w-10 h-10 rounded-full object-cover shrink-0"
                                 />

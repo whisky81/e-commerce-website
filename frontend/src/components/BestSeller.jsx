@@ -30,6 +30,7 @@ const BestSeller = () => {
                         salePrice={item.salePrice}
                         discount={item.discount}
                         soldCount={item.soldCount}
+                        saleEndAt={item.saleEndAt}
                     />
                 ))}
             </div>

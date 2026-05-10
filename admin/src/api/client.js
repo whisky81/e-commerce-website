@@ -11,8 +11,11 @@ apiClient.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid → force redirect to login
-      window.location.reload(); // triggers AuthProvider re-init → will show login
+      // Don't reload for the profile check — 401 is expected when not logged in
+      const isProfileCheck = error.config?.url?.includes("/api/users/profile");
+      if (!isProfileCheck) {
+        window.location.reload(); // triggers AuthProvider re-init → will show login
+      }
     }
     return Promise.reject(error);
   }

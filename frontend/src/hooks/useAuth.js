@@ -1,37 +1,55 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProfile, loginApi, registerApi, logoutApi } from '../api/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useCallback, useMemo } from 'react';
+
+// Pages where the profile query should never fire
+const AUTH_PAGES = ['/login', '/verify-email', '/verify'];
 
 export const useAuth = () => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
+    const location = useLocation();
 
-    // ─── Fetch Profile (Auth State) ──────────────────────────────────────────
-    const { data, isLoading, isError, isFetching } = useQuery({
+    const isAuthPage = useMemo(
+        () => AUTH_PAGES.includes(location.pathname),
+        [location.pathname]
+    );
+
+    // Fetch Profile (Auth State)
+    const { data, isLoading, isError } = useQuery({
         queryKey: ['profile'],
         queryFn: async () => {
             const res = await getProfile();
             if (res.data.success) return res.data.data;
             throw new Error('Not authenticated');
         },
-        retry: false, // Don't retry if 401
-        staleTime: 1000 * 60 * 10, // 10 minutes
-        refetchOnWindowFocus: true,
+        retry: false,
+        staleTime: 1000 * 60 * 10,
+        gcTime: 1000 * 60 * 30,         // keep in cache for 30 min even after unmount
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchInterval: false,          // no polling
+        enabled: !isAuthPage,
     });
 
-    const user = data || null;
+    const user = data ?? null;
     const isAuthenticated = !!user;
 
-    // ─── Mutations ─────────────────────────────────────────────────────────
+    // Login Mutation
     const loginMutation = useMutation({
         mutationFn: ({ email, password }) => loginApi(email, password),
         onSuccess: async (res) => {
             if (res.data.success) {
-                toast.success('Đăng nhập thành công');
+                toast.success(res.data.message || 'Đăng nhập thành công');
                 await queryClient.invalidateQueries({ queryKey: ['profile'] });
-                await queryClient.invalidateQueries({ queryKey: ['cart'] });
-                navigate('/');
+                const redirectUrl = res.data?.data?.redirectUrl;
+                if (redirectUrl && redirectUrl !== window.location.origin) {
+                    window.location.href = redirectUrl;
+                } else {
+                    navigate('/');
+                }
             } else {
                 toast.error(res.data.message || 'Lỗi đăng nhập');
             }
@@ -41,11 +59,12 @@ export const useAuth = () => {
         }
     });
 
+    // Register Mutation
     const registerMutation = useMutation({
         mutationFn: ({ name, email, password }) => registerApi(name, email, password),
         onSuccess: async (res) => {
             if (res.data.success) {
-                toast.success('Đăng ký thành công');
+                toast.success(res.data.message || 'Đăng ký thành công');
                 await queryClient.invalidateQueries({ queryKey: ['profile'] });
                 navigate('/');
             } else {
@@ -57,23 +76,25 @@ export const useAuth = () => {
         }
     });
 
+    // Logout Mutation — targeted cleanup instead of clear()
     const logoutMutation = useMutation({
         mutationFn: () => logoutApi(),
         onSuccess: () => {
+            // Set profile to null (logged out) — keeps it in cache so it won't re-fire
             queryClient.setQueryData(['profile'], null);
-            queryClient.setQueryData(['cart'], null);
+            queryClient.removeQueries({ queryKey: ['cart'] });
             toast.success('Đã đăng xuất');
             navigate('/login');
         },
         onError: () => {
-            // Force local logout even if API fails
             queryClient.setQueryData(['profile'], null);
+            queryClient.removeQueries({ queryKey: ['cart'] });
             navigate('/login');
         }
     });
 
-    // ─── Expose OAuth helper to clean up URL ──────────────────────────────
-    const handleOAuthCallback = () => {
+    // OAuth callback handler
+    const handleOAuthCallback = useCallback(() => {
         const params = new URLSearchParams(window.location.search);
         const authResult = params.get("auth");
         const authError  = params.get("error");
@@ -90,19 +111,23 @@ export const useAuth = () => {
             toast.error(messages[authError] || "Đăng nhập OAuth thất bại.");
             window.history.replaceState({}, "", window.location.pathname);
         }
-    };
+    }, [queryClient]);
+
+    const login    = useCallback((creds) => loginMutation.mutate(creds), [loginMutation.mutate]);
+    const register = useCallback((creds) => registerMutation.mutate(creds), [registerMutation.mutate]);
+    const logout   = useCallback(() => logoutMutation.mutate(), [logoutMutation.mutate]);
 
     return {
         user,
         isAuthenticated,
-        isLoading: isLoading,
+        isLoading,
         isError,
-        login: loginMutation.mutate,
+        login,
         loginAsync: loginMutation.mutateAsync,
         isLoggingIn: loginMutation.isPending,
-        register: registerMutation.mutate,
+        register,
         isRegistering: registerMutation.isPending,
-        logout: logoutMutation.mutate,
+        logout,
         handleOAuthCallback,
     };
 };

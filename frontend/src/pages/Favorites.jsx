@@ -21,7 +21,7 @@ const Favorites = () => {
       try {
         const res = await axios.get(`${backendUrl}/api/users/favorites`, { withCredentials: true });
         if (res.data.success) {
-          setItems(res.data.data || []);
+          setItems(res.data.data?.favorites || []);
         }
       } catch {
         setItems([]);
@@ -58,7 +58,10 @@ const Favorites = () => {
               name={item.name}
               images={item.images}
               price={item.price}
+              salePrice={item.salePrice}
+              discount={item.discount}
               soldCount={item.soldCount}
+              saleEndAt={item.saleEndAt}
             />
           ))}
         </div>

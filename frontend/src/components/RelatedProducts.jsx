@@ -28,6 +28,7 @@ const RelatedProducts = ({ category, brand }) => {
                         discount={item.discount}
                         images={item.images}
                         soldCount={item.soldCount}
+                        saleEndAt={item.saleEndAt}
                     />
                 ))}
             </div>

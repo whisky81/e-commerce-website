@@ -1,5 +1,4 @@
-// frontend/src/pages/Collection.jsx
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import useShopContext from '../hooks/useShopContext'
 import Title from '../components/Title'
 import ProductItem from '../components/ProductItem'
@@ -15,7 +14,7 @@ const Collection = () => {
   const [showFilter, setShowFilter]   = useState(false)
   const [category,   setCategory]     = useState([])
   const [brands,     setBrands]       = useState([])
-  const [sortType,   setSortType]     = useState('relavent')
+  const [sortType,   setSortType]     = useState('newest')
   const [debouncedSearch, setDebouncedSearch] = useState(search)
 
   // ─── Pagination: read from URL ──────────────────────────────────────────────
@@ -87,9 +86,9 @@ const Collection = () => {
       {/* ── Sidebar filter ── */}
       <div className='w-full sm:w-56 flex-shrink-0'>
         <button onClick={() => setShowFilter(!showFilter)}
-          className='sm:hidden w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold mb-4'
+          className='sm:hidden w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold mb-4 cursor-pointer'
           style={{ background: '#fff', border: '1.5px solid #EDE9FE', color: '#1E1B4B' }}>
-          <span>🔍 Bộ lọc {(category.length + brands.length) > 0 && `(${category.length + brands.length})`}</span>
+          <span><svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> Bộ lọc {(category.length + brands.length) > 0 && `(${category.length + brands.length})`}</span>
           <span>{showFilter ? '▲' : '▼'}</span>
         </button>
 
@@ -152,7 +151,7 @@ const Collection = () => {
           <select value={sortType} onChange={e => setSortType(e.target.value)}
             className='text-sm px-3 py-2 rounded-xl font-medium cursor-pointer'
             style={{ border: '1.5px solid #EDE9FE', color: '#1E1B4B', background: '#fff' }}>
-            <option value="relavent">Mới nhất</option>
+            <option value="newest">Mới nhất</option>
             <option value="low-high">Giá: thấp → cao</option>
             <option value="high-low">Giá: cao → thấp</option>
           </select>
@@ -181,6 +180,7 @@ const Collection = () => {
                 salePrice={item.salePrice}
                 discount={item.discount}
                 soldCount={item.soldCount}
+                saleEndAt={item.saleEndAt}
               />
             ))}
           </div>

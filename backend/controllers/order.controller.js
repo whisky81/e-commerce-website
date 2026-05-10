@@ -71,7 +71,7 @@ const buildLineItems = async (orderItems) => {
   }
 
   const products = await Product.find({ _id: { $in: productIds } })
-    .select("name price stock images")
+    .select("name price stock images discount saleStartAt saleEndAt")
     .lean({ virtuals: true });
 
   if (products.length !== productIds.length) {

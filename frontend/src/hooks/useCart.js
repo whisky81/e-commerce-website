@@ -1,11 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCart, addToCart as apiAddToCart, removeFromCart as apiRemoveFromCart } from '../api/cart';
-import { useAuth } from './useAuth';
 import { toast } from 'react-toastify';
 
-export const useCart = () => {
+export const useCart = (isAuthenticated = false) => {
     const queryClient = useQueryClient();
-    const { isAuthenticated } = useAuth();
 
     // ─── Fetch Cart ──────────────────────────────────────────────────────────
     const { data: cartItems = {}, isLoading } = useQuery({
@@ -16,10 +14,14 @@ export const useCart = () => {
                 const tmp = {};
                 for (const item of res.data.data) {
                     const p = item.product;
+                    const displayPrice = p.salePrice ?? p.price;
+                    const hasDiscount = p.salePrice != null && p.salePrice < p.price;
                     tmp[p._id] = {
                         id: p._id,
                         name: p.name,
-                        price: p.salePrice ?? p.price,
+                        price: displayPrice,
+                        originalPrice: hasDiscount ? p.price : null,
+                        discount: hasDiscount ? p.discount : null,
                         image: p.images?.[0]?.url || "",
                         quantity: item.quantity
                     };
@@ -28,23 +30,20 @@ export const useCart = () => {
             }
             return {};
         },
-        enabled: isAuthenticated, // Only fetch if logged in
+        enabled: isAuthenticated,
         staleTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: false,
     });
 
-    // ─── Mutations ─────────────────────────────────────────────────────────
+    // ─── Update Quantity Mutation ───────────────────────────────────────────
     const updateQuantityMutation = useMutation({
         mutationFn: async ({ productId, quantity }) => {
             if (quantity <= 0) {
                 return apiRemoveFromCart(productId);
             }
-            // AddToCart API supports updating quantity if item exists on the backend
-            // Let's assume apiAddToCart(productId, qty) sets/adds it.
-            // Wait, is it delta or absolute? Let's check api. If it's absolute, we pass quantity. 
-            // In the legacy code: syncCartItem(productId, quantity) was called.
             return apiAddToCart(productId, quantity);
         },
-        onMutate: async ({ productId, quantity }) => {
+        onMutate: async ({ productId, quantity, optimisticData }) => {
             await queryClient.cancelQueries({ queryKey: ['cart'] });
             const previousCart = queryClient.getQueryData(['cart']);
 
@@ -52,8 +51,12 @@ export const useCart = () => {
                 const newCart = { ...(old || {}) };
                 if (quantity <= 0) {
                     delete newCart[productId];
-                } else if (newCart[productId]) {
-                    newCart[productId].quantity = quantity;
+                } else {
+                    newCart[productId] = {
+                        ...(newCart[productId] || {}),
+                        quantity,
+                        ...(optimisticData || {}),
+                    };
                 }
                 return newCart;
             });
@@ -61,16 +64,14 @@ export const useCart = () => {
             return { previousCart };
         },
         onError: (err, variables, context) => {
-            queryClient.setQueryData(['cart'], context.previousCart);
-            toast.error('Lỗi cập nhật giỏ hàng');
+            if (context?.previousCart) {
+                queryClient.setQueryData(['cart'], context.previousCart);
+            }
+            toast.error(err.response?.data?.message || 'Lỗi cập nhật giỏ hàng');
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['cart'] });
-        }
     });
 
-    // ─── Helpers ───────────────────────────────────────────────────────────
-    // Fix addToCart logic for absolute quantity
+    // ─── Add to Cart helper ─────────────────────────────────────────────────
     const handleAddToCart = (id, name, image, price, salePrice) => {
         if (!isAuthenticated) {
             toast.info("Vui lòng đăng nhập để mua hàng");
@@ -93,8 +94,13 @@ export const useCart = () => {
         updateQuantityMutation.mutate({ productId, quantity });
     };
 
-    const cartCount = Object.values(cartItems).reduce((acc, item) => acc + item.quantity, 0);
-    const cartAmount = Object.values(cartItems).reduce((acc, item) => acc + item.quantity * item.price, 0);
+    const cartCount = typeof cartItems === 'object'
+        ? Object.values(cartItems).reduce((acc, item) => acc + (item?.quantity || 0), 0)
+        : 0;
+
+    const cartAmount = typeof cartItems === 'object'
+        ? Object.values(cartItems).reduce((acc, item) => acc + (item?.quantity || 0) * (item?.price || 0), 0)
+        : 0;
 
     return {
         cartItems,

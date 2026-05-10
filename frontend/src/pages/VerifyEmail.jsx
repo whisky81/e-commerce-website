@@ -1,5 +1,5 @@
 // frontend/src/pages/VerifyEmail.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import useShopContext from "../hooks/useShopContext";
@@ -11,6 +11,7 @@ const VerifyEmail = () => {
   const queryClient = useQueryClient();
   const [status,  setStatus]  = useState("loading"); // loading | success | error
   const [message, setMessage] = useState("");
+  const firedRef = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get("token");
@@ -20,22 +21,16 @@ const VerifyEmail = () => {
       return;
     }
 
-    // ── AbortController approach ────────────────────────────────────────────
-    // React 18 StrictMode mounts → runs effect → unmounts → remounts → runs
-    // effect again.  The previous useRef guard prevented the second (real) call
-    // and left the component stuck on "loading".
-    //
-    // With AbortController, the first request is *cancelled* when the component
-    // unmounts (StrictMode cleanup).  The second mount issues a fresh request
-    // that actually completes.  In production there is no double-mount, so a
-    // single request is made and completed normally.
-    const controller = new AbortController();
+    // Prevent double-fire in React StrictMode (dev double-mount).
+    // The previous AbortController approach was broken: aborting the first
+    // request does NOT stop the backend from consuming the one-use token,
+    // so the second request (StrictMode remount) always found the token
+    // already consumed and showed "verify thất bại".
+    if (firedRef.current) return;
+    firedRef.current = true;
 
     axios
-      .get(
-        `${backendUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`,
-        { signal: controller.signal }
-      )
+      .get(`${backendUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`)
       .then(res => {
         if (res.data.success) {
           setStatus("success");
@@ -48,16 +43,11 @@ const VerifyEmail = () => {
         }
       })
       .catch(err => {
-        // Ignore cancellation (caused by StrictMode unmount / cleanup)
-        if (axios.isCancel(err) || err.code === "ERR_CANCELED") return;
         setStatus("error");
         setMessage(
           err.response?.data?.message || "Có lỗi xảy ra. Vui lòng thử lại."
         );
       });
-
-    // Cleanup: abort in-flight request when component unmounts
-    return () => controller.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
 

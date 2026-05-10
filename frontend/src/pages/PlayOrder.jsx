@@ -7,6 +7,7 @@ import { assets } from "../assets/assets";
 import useShopContext from "../hooks/useShopContext";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useQueryClient } from "@tanstack/react-query";
 import ProductRow from "../components/ProductRow";
 import AddressForm from "../components/AddressForm";
 
@@ -17,7 +18,8 @@ const EMPTY_ADDR = {
 
 const PlaceOrder = () => {
   const location = useLocation();
-  const { navigate, backendUrl, cartItems, setCartItems, user, my } = useShopContext();
+  const { navigate, backendUrl, cartItems, user } = useShopContext();
+  const queryClient = useQueryClient();
 
   // Items passed from Cart.jsx (only the ones the user selected)
   const selectedCartItems = location.state?.selectedCartItems || Object.values(cartItems);
@@ -42,9 +44,9 @@ const PlaceOrder = () => {
       toast.success("Đã thêm địa chỉ mới");
       setShowAddAddressForm(false);
       setShowAddressPopup(false);
-      await my();
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message || "Không thể thêm địa chỉ");
     }
   };
 
@@ -54,20 +56,13 @@ const PlaceOrder = () => {
     setPlacing(true);
 
     // Only order the selected items
-    const shippingAddress = {
-      fullName: selectedAddress.fullName,
-      phone:    selectedAddress.phone,
-      street:   selectedAddress.street,
-      ward:     selectedAddress.ward,
-      province: selectedAddress.province,
-    };
     const orderItems = selectedCartItems.map(item => ({ product: item.id, quantity: item.quantity }));
 
     try {
       let response;
 
       if (method === "cod") {
-        response = await axios.post(backendUrl + "/api/orders/place", { shippingAddress, orderItems }, { withCredentials: true });
+        response = await axios.post(backendUrl + "/api/orders/place", { addressId: selectedAddress._id, orderItems }, { withCredentials: true });
         if (response.status === 401) { navigate("/login"); return; }
         if (!response.data.success) {
           if (response.data.code === "EMAIL_NOT_VERIFIED")
@@ -77,11 +72,11 @@ const PlaceOrder = () => {
           return;
         }
         toast.success(response.data.message);
-        setCartItems({});
+        queryClient.setQueryData(['cart'], {});
         navigate("/orders");
 
       } else if (method === "stripe") {
-        response = await axios.post(backendUrl + "/api/orders/stripe", { shippingAddress, orderItems }, { withCredentials: true });
+        response = await axios.post(backendUrl + "/api/orders/stripe", { addressId: selectedAddress._id, orderItems }, { withCredentials: true });
         if (!response.data.success) {
           if (response.data.code === "EMAIL_NOT_VERIFIED")
             toast.error("⚠️ Vui lòng xác nhận email trước khi đặt hàng.");
@@ -129,8 +124,8 @@ const PlaceOrder = () => {
   };
 
   return (
-    <form
-      onSubmit={onSubmitHandler}
+    <div
+      onKeyDown={(e) => e.key === 'Enter' && onSubmitHandler(e)}
       className="flex flex-col lg:flex-row justify-between gap-8 pt-5 sm:pt-14 min-h-[80vh] border-t px-4 md:px-8 max-w-7xl mx-auto"
     >
       {/* Left */}
@@ -226,7 +221,11 @@ const PlaceOrder = () => {
                 {
                   key: "cod",
                   label: "Thanh toán khi nhận hàng (COD)",
-                  icon: <span className="text-xl">💵</span>,
+                  icon: (
+                    <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  ),
                 },
               ].map(({ key, label, icon }) => (
                 <div
@@ -253,7 +252,8 @@ const PlaceOrder = () => {
           </div>
 
           <button
-            type="submit"
+            type="button"
+            onClick={onSubmitHandler}
             disabled={!selectedAddress || placing}
             className="w-full py-4 rounded-xl text-white font-bold transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "linear-gradient(135deg,#4F46E5,#7C3AED)" }}
@@ -351,7 +351,7 @@ const PlaceOrder = () => {
           </div>
         </div>
       )}
-    </form>
+    </div>
   );
 };
 
