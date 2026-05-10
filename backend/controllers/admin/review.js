@@ -42,3 +42,25 @@ export const bulkDeleteReviews = async (req, res) => {
         affectedProducts: uniqueProductIds.length
     }).send(res);
 }
+
+export const getReviewsAdmin = async (req, res) => {
+    const reviews = await Review.find({})
+        .populate("user", "name email")
+        .populate("product", "name")
+        .sort({ createdAt: -1 });
+    new ApiResponse(true, 200, 'Success', reviews).send(res);
+}
+
+export const toggleReviewHidden = async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new ValidationError("Invalid review id");
+    }
+    const review = await Review.findById(id);
+    if (!review) {
+        throw new NotFoundError("Review not found");
+    }
+    review.isHidden = !review.isHidden;
+    await review.save();
+    new ApiResponse(true, 200, 'Review visibility updated', review).send(res);
+}

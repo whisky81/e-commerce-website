@@ -7,10 +7,10 @@ import {
     updateProduct
 } from "../controllers/admin/product.js";
 import catchAsync from "../middleware/catchAsync.js";
-import { bulkDeleteReviews } from "../controllers/admin/review.js";
+import { bulkDeleteReviews, getReviewsAdmin, toggleReviewHidden } from "../controllers/admin/review.js";
 import upload from "../middleware/multer.js";
 import { adminStats } from "../controllers/adminStats.controller.js";
-import {bulkDeactivateUsers} from "../controllers/admin/user.js"
+import { bulkDeactivateUsers, getUsersAdmin, toggleUserActive } from "../controllers/admin/user.js"
 import Subscriber from "../models/Subscriber.js";
 import ApiResponse from "../utils/ApiResponse.js";
 
@@ -28,8 +28,12 @@ adminRoutes.post('/products', upload.fields([
 adminRoutes.delete("/products", catchAsync(bulkDeleteProducts));
 adminRoutes.put("/products/:productId", catchAsync(updateProduct));
 // reviews 
+adminRoutes.get("/reviews", catchAsync(getReviewsAdmin));
+adminRoutes.put("/reviews/:id/toggle-hidden", catchAsync(toggleReviewHidden));
 adminRoutes.delete("/reviews", catchAsync(bulkDeleteReviews));
 // user 
+adminRoutes.get("/users", catchAsync(getUsersAdmin));
+adminRoutes.patch("/users/:id/toggle-active", catchAsync(toggleUserActive));
 adminRoutes.post("/users/bulk-deactivate", catchAsync(bulkDeactivateUsers));
 
 // subscriber 

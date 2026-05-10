@@ -20,3 +20,22 @@ export const bulkDeactivateUsers = async (req, res) => {
         modifiedCount: result.modifiedCount
     }, null).send(res);
 }
+
+export const getUsersAdmin = async (req, res) => {
+    const users = await User.find({}).select("-password").sort({ createdAt: -1 });
+    new ApiResponse(true, 200, 'Success', users).send(res);
+}
+
+export const toggleUserActive = async (req, res) => {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new ValidationError("Invalid user id");
+    }
+    const user = await User.findById(id);
+    if (!user) {
+        throw new ValidationError("User not found");
+    }
+    user.isActive = !user.isActive;
+    await user.save();
+    new ApiResponse(true, 200, 'User status updated', user).send(res);
+}
