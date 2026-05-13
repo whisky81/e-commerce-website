@@ -2,13 +2,14 @@ import IShippingAdapter from "./IShippingAdaper.js";
 import ThirdPartyServiceError from "../../errors/ThirdPartyServiceError.js";
 
 class GhnAdapter extends IShippingAdapter {
-    constructor(tokenId, clientId, shops) {
+    constructor(baseUrl, tokenId, clientId, shops) {
         super();
         this.tokenId = tokenId;
         this.clientId = clientId;
         this.shops = shops || [];
+        this.baseUrl = baseUrl;
     }
-    static async create(tokenId, clientId, offset = 0, limit = 50, clientPhone = null) {
+    static async create(baseUrl, tokenId, clientId, offset = 0, limit = 50, clientPhone = null) {
         // fetch shops 
         const response = await fetch(
             "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shop/all",
@@ -38,11 +39,11 @@ class GhnAdapter extends IShippingAdapter {
             districtId: shop.district_id,
             createdDate: shop.created_date
         }));
-        return new GhnAdapter(tokenId, clientId, shops);
+        return new GhnAdapter(baseUrl, tokenId, clientId, shops);
     }
     async provinces() {
         const response = await fetch(
-            "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee",
+            "https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/province",
             {
                 method: "GET",
                 headers: {
@@ -76,7 +77,7 @@ class GhnAdapter extends IShippingAdapter {
         const response = await fetch(
             "https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/district",
             {
-                method: "GET",
+                method: "POST",
                 headers: {
                     token: this.tokenId,
                     "Content-Type": "application/json",
@@ -258,7 +259,7 @@ class GhnAdapter extends IShippingAdapter {
             to_district_name: order.recipient.district,
             to_province_name: order.recipient.province,
             cod_amount: isCOD ? order.totalAmount : 0,
-            payment_type_id: 1,
+            payment_type_id: order.shippingFeeBearer === 'buyer' ? 2 : 1,
             service_type_id: 2,
             required_note: 'KHONGCHOXEMHANG',
             weight: order.totalWeight,
@@ -274,7 +275,7 @@ class GhnAdapter extends IShippingAdapter {
             })),
         };
         const res = await fetch(
-            'https://online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create',
+            'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create', 
             {
                 method: 'POST',
                 headers: {
@@ -287,6 +288,7 @@ class GhnAdapter extends IShippingAdapter {
         )
         const data = await res.json()
         if (data.code !== 200) throw new ThirdPartyServiceError("API Error", "ghn");
+        // normalize place order response
         return data.data;
     }
     /**

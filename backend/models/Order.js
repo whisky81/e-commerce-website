@@ -25,6 +25,7 @@ const shippingAddressSchema = new mongoose.Schema(
     fullName: String,
     phone: String,
     street: String,
+    district: String,
     ward: String,
     province: String
   },
