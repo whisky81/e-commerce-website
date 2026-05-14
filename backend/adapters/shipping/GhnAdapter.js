@@ -1,6 +1,7 @@
 import IShippingAdapter from "./IShippingAdaper.js";
 import ThirdPartyServiceError from "../../errors/ThirdPartyServiceError.js";
 
+
 class GhnAdapter extends IShippingAdapter {
     constructor(baseUrl, tokenId, clientId, shops) {
         super();
@@ -252,22 +253,27 @@ class GhnAdapter extends IShippingAdapter {
     }
     async placeOrder(shopIdx = 0, order) {
         const isCOD = order.payment.method === "cod";
+        const toAddress = order.shippingAddress.street + ", " 
+                        + order.shippingAddress.wardName + ", "
+                        + order.shippingAddress.districtName + ", "
+                        + order.shippingAddress.provinceName;
+        const codAmount = Math.min(isCOD ? (order.fee.subtotal - order.fee.discount) : 0, 50_000_000);
         const payload = {
             to_name: order.shippingAddress.fullName,
             to_phone: order.shippingAddress.phone,
-            to_address: "todo",
+            to_address: toAddress,
             to_ward_name: order.shippingAddress.wardName,
             to_district_name: order.shippingAddress.districtName,
             to_province_name: order.shippingAddress.provinceName,
-            cod_amount: Math.min(isCOD ? order.totalAmount : 0, 50_000_000),
-            payment_type_id: order.shippingFeeBearer === 'buyer' ? 2 : 1,
+            cod_amount: codAmount,
+            payment_type_id: isCOD ? 2 : 1,
             service_type_id: 2,
             required_note: 'KHONGCHOXEMHANG',
-            weight: Math.min(order.totalWeight, 50_000),
+            weight: Math.min(order.package.weight, 50_000),
             length: Math.min(order.package.length, 200),
             width: Math.min(order.package.width, 200),
             height: Math.min(order.package.height, 200),
-            insurance_value: Math.min(order.totalAmount, 5_000_000), // <= 5_000_000
+            insurance_value: Math.min(order.fee.subtotal, 5_000_000), // <= 5_000_000
             items: order.items.map(item => ({
                 name: item.name,
                 quantity: item.quantity,
@@ -287,9 +293,21 @@ class GhnAdapter extends IShippingAdapter {
             }
         )
         const data = await res.json()
-        if (data.code !== 200) throw new ThirdPartyServiceError("API Error", "ghn");
+        if (data.code !== 200) throw new ThirdPartyServiceError("Place order error", "ghn");
         // normalize place order response
-        return data.data;
+        // return data.data;
+        return {
+            order: order._id,
+            providerOrderCode: data.data.order_code,
+            clientOrderCode: order.code,
+            fee: {
+                total: data.data.total_fee,
+                main: data.data.fee.main_service,
+                insurance: data.data.fee.insurance
+            },
+            expectedDelivery: new Date(data.data.expected_delivery_time),
+            lastResponse: data.data
+        }
     }
     /**
      * @link https://api.ghn.vn/home/docs/detail?id=99
@@ -526,7 +544,8 @@ class GhnAdapter extends IShippingAdapter {
             throw new Error(`GHN API Error: ${response.status}`);
         }
         const data = await response.json();
-        return data;
+        console.log(data);
+        return data.code === 200;
     }
 }
 

@@ -24,6 +24,7 @@ import errorHandler from "./middleware/errorHandler.js";
 import requestLogger from "./middleware/requestLogger.js";
 import addrRoutes from "./routes/v3/addressRoutes.js";
 import orderRoutesV3 from "./routes/v3/orderRoutes.js";
+import adminRoutesV3 from "./routes/v3/adminRoutes.js";
 
 const app  = express();
 const port = process.env.PORT || 5000;
@@ -62,7 +63,9 @@ app.use("/api/subscribers", subscriberRoutes);
 
 // api version 3 
 app.use("/api/v3/addresses/3-level", addrRoutes);
+app.use("/api/v3/admin", adminRoutesV3);
 app.use("/api/v3", orderRoutesV3);
+
 
 app.get("/", (req, res) => {
   const { origin = "https://test.org" } = req.headers;

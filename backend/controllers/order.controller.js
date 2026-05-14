@@ -15,6 +15,7 @@ import NotFoundError from "../errors/NotFoundError.js";
 import ForbiddenError from "../errors/ForbiddenError.js";
 import logger from "../config/Logger.js";
 import shippingProvider from "../config/shipping.js";
+import ShippingOrder from "../models/ShippingOrder.js";
 
 const SHIPPING_PRICE = 20000;
 const STRIPE_CURRENCY = "vnd";
@@ -402,34 +403,86 @@ export const contactSupport = async (req, res) => {
 // ─── List Orders (admin) ──────────────────────────────────────────────────────
 
 export const ordersList = async (req, res) => {
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
-  const skip = (page - 1) * limit;
+  new ApiResponse(false, 400, "Unsupport").send(res);
+};
 
+const ordersData = async (skip, limit, filter) => {
   const [orders, total] = await Promise.all([
-    Order.find({})
+    Order.find(filter)
+      .select("-fee.shipping -fee.total -package")
       .populate("user", "name email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean({ virtuals: true }),
-    Order.countDocuments({}),
+      .lean(),
+    Order.countDocuments(filter)
   ]);
 
-  ApiResponse.paginated(orders, { page, limit, total }).send(res);
+  const orderIds = orders.map(order => order._id);
+
+  const shippingOrders = await ShippingOrder.find({
+    order: { $in: orderIds }
+  })
+    .select(
+      "order provider providerOrderCode status fee.main expectedDelivery"
+    )
+    .lean();
+
+  // O(1) lookup map
+  const shippingMap = new Map(
+    shippingOrders.map(shipping => [
+      String(shipping.order),
+      {
+        provider: shipping.provider,
+        code: shipping.providerOrderCode,
+        status: shipping.status,
+        fee: shipping.fee?.main ?? 0,
+        expectedDelivery: shipping.expectedDelivery
+      }
+    ])
+  );
+
+  // attach shipping to each order
+  const data = orders.map(order => ({
+    ...order,
+    shipping: shippingMap.get(String(order._id)) || null
+  })).map(o => ({ ...o, totalFee: o.fee.subtotal - o.fee.discount + o.shipping.fee }));
+  return {data, total};
+}
+
+export const ordersListV3 = async (req, res) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
+  const skip = (page - 1) * limit;
+
+  const { data, total } = await ordersData(skip, limit, {});
+
+  ApiResponse.paginated(data, {
+    page,
+    limit,
+    total
+  }).send(res);
 };
 
 // ─── User Orders ──────────────────────────────────────────────────────────────
 
 export const userOrders = async (req, res) => {
-  const orders = await Order.find({ user: req.user._id })
-    .sort({ createdAt: -1 })
-    .lean({ virtuals: true });
-  ApiResponse.success("Success", orders).send(res);
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
+  const skip = (page - 1) * limit;
+
+  const { data, total } = await ordersData(skip, limit, {user: req.user._id});
+  // console.log(data, total);
+
+  ApiResponse.paginated(data, {
+    page,
+    limit,
+    total
+  }).send(res);
 };
 
 // ─── Update Status (admin) ────────────────────────────────────────────────────
-
+// vì đây là demo nên cứ để update status manua như này
 export const updateStatus = async (req, res) => {
   const { bulk, status } = req.body;
   if (
@@ -641,16 +694,16 @@ export const placeOrderStripeV3 = async (req, res) => {
     line_items: stripeLineItems,
   };
   if (newOrder.fee.discount > 0) {
-      const coupon = await getStripe().coupons.create({
-        amount_off: newOrder.fee.discount,
-        currency: STRIPE_CURRENCY,
-        duration: "once",
-      });
-      sessionObj.discounts = [
-        {
-          coupon: coupon.id,
-        }
-      ];
+    const coupon = await getStripe().coupons.create({
+      amount_off: newOrder.fee.discount,
+      currency: STRIPE_CURRENCY,
+      duration: "once",
+    });
+    sessionObj.discounts = [
+      {
+        coupon: coupon.id,
+      }
+    ];
   }
   const stripeSession = await getStripe().checkout.sessions.create(sessionObj);
 
@@ -662,7 +715,7 @@ export const placeOrderStripeV3 = async (req, res) => {
 }
 
 export const stripeCheckoutSession = async (req, res) => {
-    const { orderId, success, fromCart = "true" } = req.body;
+  const { orderId, success, fromCart = "true" } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(orderId))
     throw new ValidationError("Invalid order ID");

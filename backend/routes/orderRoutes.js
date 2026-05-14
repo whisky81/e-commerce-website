@@ -19,15 +19,15 @@ import catchAsync from "../middleware/catchAsync.js";
 const orderRoutes = express.Router();
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
-orderRoutes.get ("/",       protect, adminOnly, catchAsync(ordersList));
-orderRoutes.put ("/status", protect, adminOnly, catchAsync(updateStatus));
+orderRoutes.get ("/",       protect, adminOnly, catchAsync(ordersList)); //TODO 
+orderRoutes.put ("/status", protect, adminOnly, catchAsync(updateStatus)); // TODO 
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 orderRoutes.post("/place",  protect, catchAsync(placeOrder));
 orderRoutes.post("/stripe", protect, catchAsync(placeOrderStripe));
 orderRoutes.post("/momo",   protect, catchAsync(placeOrderMoMo));
 orderRoutes.post("/vnpay",  protect, catchAsync(placeOrderVNPay));
-orderRoutes.get ("/me",     protect, catchAsync(userOrders));
+orderRoutes.get ("/me",     protect, catchAsync(userOrders)); // TODO
 
 // ─── Payment verification ─────────────────────────────────────────────────────
 // verify-stripe: user phải đăng nhập để verify

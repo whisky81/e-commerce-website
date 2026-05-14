@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const shippingOrderSchema = new mongoose.Schema({
-  order: { type: ObjectId, ref: 'Order', required: true, unique: true }, // 1-1
+  order: { type: mongoose.Types.ObjectId, ref: 'Order', required: true, unique: true }, // 1-1
 
   provider: { type: String, default: 'ghn' },
   providerOrderCode: String, // mã GHN trả về
