@@ -7,6 +7,7 @@ import connectDB from "./config/db.js";
 import connectCloudinary from "./config/cloudinary.js";
 import passport from "./config/passport.js";
 import logger from "./config/Logger.js";
+import shippingProvider from "./config/shipping.js";
 
 // Routes
 import authRoutes       from "./routes/authRoutes.js";
@@ -21,12 +22,15 @@ import marketingRoutes  from "./routes/marketingRoutes.js";
 import subscriberRoutes from "./routes/subscriberRoutes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import requestLogger from "./middleware/requestLogger.js";
+import addrRoutes from "./routes/v3/addressRoutes.js";
+import orderRoutesV3 from "./routes/v3/orderRoutes.js";
 
 const app  = express();
 const port = process.env.PORT || 5000;
 
 connectDB();
 connectCloudinary();
+console.log(shippingProvider);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -56,7 +60,14 @@ app.use("/api/setting",     settingRoutes);
 app.use("/api/marketing",   marketingRoutes);
 app.use("/api/subscribers", subscriberRoutes);
 
-app.get("/", (req, res) => res.json({ message: "ABC Shop API v2 is running" }));
+// api version 3 
+app.use("/api/v3/addresses/3-level", addrRoutes);
+app.use("/api/v3", orderRoutesV3);
+
+app.get("/", (req, res) => {
+  const { origin = "https://test.org" } = req.headers;
+  res.json({ message: "ABC Shop API v2 is running", origin })
+});
 
 app.use(errorHandler);
 
@@ -71,6 +82,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 process.on('uncaughtException', (err) => {
+  // console.log(err);
   logger.error('Uncaught Exception', {
     message: err.message,
     stack: err.stack 

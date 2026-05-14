@@ -9,7 +9,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon v2.js",
-    "dev:v3": "cross-env DB_NAME=v3 nodemon v2.js"
+    "dev:v3": "cross-env DB_NAME=v3 nodemon v2.js",
+    "dev:local:test": "cross-env RANGE=local nodemon v2.js"
   },
   "packageManager": "npm@11.4.2+sha512.f90c1ec8b207b625d6edb6693aef23dacb39c38e4217fe8c46a973f119cab392ac0de23fe3f07e583188dae9fd9108b3845ad6f525b598742bd060ebad60bff3",
   "dependencies": {
@@ -33,6 +34,7 @@
     "passport-google-oauth20": "^2.0.0",
     "razorpay": "^2.9.6",
     "stripe": "^20.2.0",
+    "ulid": "^3.0.2",
     "uuid": "^14.0.0",
     "validator": "^13.15.26",
     "winston": "^3.19.0",

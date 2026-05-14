@@ -1,98 +1,19 @@
 import mongoose from "mongoose";
 
-const shippingFeeSchema = new mongoose.Schema(
-  {
-    total: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+const shippingOrderSchema = new mongoose.Schema({
+  order: { type: ObjectId, ref: 'Order', required: true, unique: true }, // 1-1
 
-    insurance: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+  provider: { type: String, default: 'ghn' },
+  providerOrderCode: String, // mã GHN trả về
+  clientOrderCode: String,   // = order.code, để idempotent
 
-    mainService: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+  status: { type: String, default: 'pending' }, // lưu luôn status GHN gốc
+  fee: { total: Number, main: Number, insurance: Number },
+  expectedDelivery: Date,
+  trackingUrl: String,
 
-    returnFee: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-  },
-  { _id: false }
-);
-
-const shippingOrderSchema = new mongoose.Schema(
-  {
-    order: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
-      required: true,
-      index: true,
-    },
-
-    provider: {
-      type: String,
-      enum: ["ghn"],
-      default: "ghn",
-      required: true,
-    },
-
-    providerOrderCode: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-
-    shippingStatus: {
-      type: String,
-      enum: [
-        "pending",
-        "ready_to_pick",
-        "picking",
-        "delivering",
-        "delivered",
-        "return",
-        "returned",
-        "cancelled",
-        "failed",
-      ],
-      default: "pending",
-      index: true,
-    },
-
-    expectedDeliveryTime: {
-      type: Date,
-    },
-
-    trackingUrl: {
-      type: String,
-      trim: true,
-    },
-
-    fee: shippingFeeSchema,
-
-    rawProviderResponse: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
-    },
-
-    lastSyncedAt: {
-      type: Date,
-    }
-  },
-  {
-    timestamps: true,
-  }
-);
+  lastResponse: mongoose.Schema.Types.Mixed // để debug, không cần parse
+}, { timestamps: true });
 
 const ShippingOrder =
   mongoose.models.ShippingOrder ||

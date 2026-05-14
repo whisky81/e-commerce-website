@@ -14,6 +14,7 @@ import ValidationError from "../errors/ValidationError.js";
 import NotFoundError from "../errors/NotFoundError.js";
 import ForbiddenError from "../errors/ForbiddenError.js";
 import logger from "../config/Logger.js";
+import shippingProvider from "../config/shipping.js";
 
 const SHIPPING_PRICE = 20000;
 const STRIPE_CURRENCY = "vnd";
@@ -71,7 +72,7 @@ const buildLineItems = async (orderItems) => {
   }
 
   const products = await Product.find({ _id: { $in: productIds } })
-    .select("name price stock images discount saleStartAt saleEndAt")
+    .select("name price stock images discount saleStartAt saleEndAt specifications")
     .lean({ virtuals: true });
 
   if (products.length !== productIds.length) {
@@ -79,11 +80,21 @@ const buildLineItems = async (orderItems) => {
   }
 
   let itemsPrice = 0;
+  let weight = 0;
+  let nums = {
+    length: 6,
+    width: 6,
+    height: 6
+  }
   const lineItems = products.map((p) => {
     const qty = quantityMap[p._id.toString()];
     if (p.stock < qty)
       throw new AppError(`Sản phẩm "${p.name}" không đủ hàng`, 400, "OUT_OF_STOCK");
     itemsPrice += p.salePrice * qty;
+    for (const spec of p.specifications) {
+      if (spec.key === "weight") weight += spec.value;
+      if (["length", "width", "height"].includes(spec.key)) nums[spec.key] = Math.max(nums[spec.key], spec.value);
+    }
     return {
       product: p._id,
       name: p.name,
@@ -96,7 +107,7 @@ const buildLineItems = async (orderItems) => {
     };
   });
 
-  return { itemsPrice, lineItems };
+  return { itemsPrice, lineItems, weight: Math.max(weight, 10), ...nums };
 };
 
 /**
@@ -107,25 +118,23 @@ const applyWelcomeDiscount = async (userId, orderId) => {
   try {
     const subscriber = await Subscriber.findOne({ user: userId, isActive: true });
     if (!subscriber || subscriber.hasUsedWelcomeDiscount) return false;
-
-    const order = await Order.findById(orderId);
-    if (!order) return false;
-
-    const discountedTotal = Math.round(order.totalPrice * 0.8);
-    const discountAmount = order.totalPrice - discountedTotal;
-
-    await Order.findByIdAndUpdate(orderId, {
-      totalPrice: discountedTotal,
-      welcomeDiscount: true,
-      welcomeDiscountAmount: discountAmount,
-    });
     await Subscriber.findByIdAndUpdate(subscriber._id, { hasUsedWelcomeDiscount: true });
     return true;
   } catch (err) {
-    logger.error("applyWelcomeDiscount failed", { userId, orderId, error: err.message });
+    logger.error("applyWelcomeDiscount failed", { userId, error: err.message });
     return false;
   }
 };
+
+const hasProductDiscount = async (userId) => {
+  try {
+    const subscriber = await Subscriber.findOne({ user: userId, isActive: true });
+    if (!subscriber || subscriber.hasUsedWelcomeDiscount) return false;
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
 
 /**
  * Trừ stock và cập nhật soldCount trong transaction
@@ -142,133 +151,11 @@ const decrementStockInSession = async (items, session) => {
 };
 
 export const placeOrder = async (req, res) => {
-  requireEmailVerified(req.user);
-
-  const userId = req.user._id;
-  const { addressId, orderItems: rawItems } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(addressId))
-    throw new ValidationError("Invalid address ID");
-  const address = req.user.addresses.id(addressId);
-  if (!address) throw new NotFoundError("Address");
-
-  const { items: resolvedItems, fromCart } = resolveOrderItems(rawItems, req.user.cart);
-  if (!resolvedItems.length) throw new AppError("Giỏ hàng trống", 400, "EMPTY_CART");
-
-  const { itemsPrice, lineItems } = await buildLineItems(resolvedItems);
-
-  const session = await mongoose.startSession();
-  let newOrderId;
-  try {
-    await session.withTransaction(async () => {
-      const [created] = await Order.create(
-        [
-          {
-            user: userId,
-            items: lineItems,
-            shippingAddress: {
-              fullName: address.fullName,
-              phone: address.phone,
-              street: address.street,
-              ward: address.ward,
-              province: address.province,
-            },
-            itemsPrice,
-            shippingPrice: SHIPPING_PRICE,
-            totalPrice: itemsPrice + SHIPPING_PRICE,
-            paymentMethod: "cod",
-          },
-        ],
-        { session }
-      );
-      newOrderId = created._id;
-      await decrementStockInSession(resolvedItems, session);
-      if (fromCart) await User.findByIdAndUpdate(userId, { cart: [] }, { session });
-    });
-  } finally {
-    session.endSession();
-  }
-
-  const usedWelcome = await applyWelcomeDiscount(userId, newOrderId);
-  const finalOrder = await Order.findById(newOrderId).lean({ virtuals: true });
-
-  await sendOrderConfirmation({
-    to: req.user.email,
-    name: req.user.name,
-    orderId: newOrderId,
-    items: finalOrder.items,
-    totalPrice: finalOrder.totalPrice,
-    welcomeDiscount: finalOrder.welcomeDiscount,
-    welcomeDiscountAmount: finalOrder.welcomeDiscountAmount,
-  }).catch((err) =>
-    logger.error("sendOrderConfirmation failed", { orderId: newOrderId, error: err.message })
-  );
-
-  ApiResponse.created({ orderId: newOrderId, welcomeDiscount: usedWelcome }, "Ordered successfully").send(res);
+  new ApiResponse(false, 400, "Unsupport").send(res);
 };
 
 export const placeOrderStripe = async (req, res) => {
-  requireEmailVerified(req.user);
-
-  const userId = req.user._id;
-  const { addressId, orderItems: rawItems } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(addressId))
-    throw new ValidationError("Invalid address ID");
-  const address = req.user.addresses.id(addressId);
-  if (!address) throw new NotFoundError("Address");
-
-  const { items: resolvedItems, fromCart } = resolveOrderItems(rawItems, req.user.cart);
-  if (!resolvedItems.length) throw new AppError("Giỏ hàng trống", 400, "EMPTY_CART");
-
-  const { itemsPrice, lineItems } = await buildLineItems(resolvedItems);
-
-  const newOrder = await Order.create({
-    user: userId,
-    items: lineItems,
-    shippingAddress: {
-      fullName: address.fullName,
-      phone: address.phone,
-      street: address.street,
-      ward: address.ward,
-      district: address.district,
-      province: address.province,
-    },
-    itemsPrice,
-    shippingPrice: SHIPPING_PRICE,
-    totalPrice: itemsPrice + SHIPPING_PRICE,
-    paymentMethod: "stripe",
-    fromCart,
-  });
-
-  const stripeLineItems = lineItems.map((item) => ({
-    price_data: {
-      currency: STRIPE_CURRENCY,
-      product_data: { name: item.name },
-      unit_amount: item.price,
-    },
-    quantity: item.quantity,
-  }));
-  stripeLineItems.push({
-    price_data: {
-      currency: STRIPE_CURRENCY,
-      product_data: { name: "Phí vận chuyển" },
-      unit_amount: SHIPPING_PRICE,
-    },
-    quantity: 1,
-  });
-
-  const { origin } = req.headers;
-  const stripeSession = await getStripe().checkout.sessions.create({
-    success_url: `${origin}/verify?success=true&orderId=${newOrder._id}&method=stripe`,
-    cancel_url: `${origin}/verify?success=false&orderId=${newOrder._id}&method=stripe`,
-    mode: "payment",
-    line_items: stripeLineItems,
-  });
-
-  ApiResponse
-    .created({ session_url: stripeSession.url }, "Stripe session created")
-    .send(res);
+  new ApiResponse(false, 400, "Unsupport").send(res);
 };
 
 // ─── MoMo ─────────────────────────────────────────────────────────────────────
@@ -377,40 +264,7 @@ export const placeOrderVNPay = async (req, res) => {
 // ─── Verify Stripe (client-side confirm) ─────────────────────────────────────
 
 export const verifyStripe = async (req, res) => {
-  const { orderId, success } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(orderId))
-    throw new ValidationError("Invalid order ID");
-
-  if (success === "true") {
-    const session = await mongoose.startSession();
-    try {
-      await session.withTransaction(async () => {
-        const order = await Order.findById(orderId).session(session);
-        if (!order) throw new NotFoundError("Order");
-        if (order.user.toString() !== req.user._id.toString())
-          throw new ForbiddenError("Bạn không có quyền thao tác với đơn hàng này");
-        if (order.isPaid) return; // idempotent
-
-        await decrementStockInSession(order.items, session);
-        order.isPaid = true;
-        order.paidAt = new Date();
-        order.status = "confirmed";
-        await order.save({ session });
-        // Chỉ clear cart nếu đơn hàng được đặt từ cart (không xóa cart khi user mua nhanh qua custom items)
-        if (order.fromCart) {
-          await User.findByIdAndUpdate(req.user._id, { cart: [] }, { session });
-        }
-      });
-    } finally {
-      session.endSession();
-    }
-    await applyWelcomeDiscount(req.user._id, orderId);
-    ApiResponse.success("Thanh toán thành công").send(res);
-  } else {
-    await Order.findByIdAndDelete(orderId);
-    throw new AppError("Thanh toán thất bại, đơn hàng đã hủy", 400, "STRIPE_PAYMENT_FAILED");
-  }
+  new ApiResponse(false, 400, "Unsupport").send(res);
 };
 
 // ─── MoMo IPN Webhook ─────────────────────────────────────────────────────────
@@ -589,3 +443,254 @@ export const updateStatus = async (req, res) => {
   const result = await Order.updateMany({ _id: { $in: bulk } }, { $set: { status } });
   new ApiResponse(true, 200, "Order status updated", null, result).send(res);
 };
+
+export const previewOrder = async (req, res) => {
+  requireEmailVerified(req.user);
+
+  const userId = req.user._id;
+  const { addressId, orderItems: rawItems } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(addressId))
+    throw new ValidationError("Invalid address ID");
+  const address = req.user.addresses.id(addressId);
+  if (!address) throw new NotFoundError("Address");
+
+  const { items: resolvedItems } = resolveOrderItems(rawItems, req.user.cart);
+  if (!resolvedItems.length) throw new AppError("Giỏ hàng trống", 400, "EMPTY_CART");
+
+  const {
+    itemsPrice: subtotal,
+    lineItems: items,
+    weight, length, width, height
+  } = await buildLineItems(resolvedItems);
+
+  const discount = (await hasProductDiscount(userId)) ? Math.floor(subtotal * 0.2) : 0;
+  const data = await shippingProvider.estimateDeliveryTime(0, address.districtId, address.wardCode);
+  if (!data.success) throw new AppError("checkout preview error", 500, "ESTIMATE_DELIVERY_TIME");
+
+  const { leadtime, deliveryTimeRemaining } = data.data;
+
+  const shippingFeeRes = await shippingProvider.calcShippingFee(2, 0, address.wardCode, address.districtId, weight, length, width, height, items);
+  if (!shippingFeeRes.success || !shippingFeeRes?.data?.total) throw new AppError("checkout preview error", 500, "CALC_SHIPPING_FEE");
+  const shipping = shippingFeeRes.data.total;
+
+  ApiResponse.success("Success", {
+    items,
+    fee: {
+      subtotal,
+      shipping,
+      discount,
+      total: subtotal + shipping - discount
+    },
+    estimatedDeliveryTime: new Date(leadtime * 1000),
+    deliveryTimeRemaining,
+    availablePaymentMethods: ["cod", "stripe"]
+  }).send(res);
+}
+
+export const beforeOrder = async (req, res, next) => {
+  requireEmailVerified(req.user);
+
+  const userId = req.user._id;
+  const { addressId, orderItems: rawItems } = req.body;
+
+  // address 
+  if (!mongoose.Types.ObjectId.isValid(addressId))
+    throw new ValidationError("Invalid address ID");
+  const address = req.user.addresses.id(addressId);
+  if (!address) throw new NotFoundError("Address");
+
+  const { items: resolvedItems, fromCart } = resolveOrderItems(rawItems, req.user.cart);
+  if (!resolvedItems.length) throw new AppError("Giỏ hàng trống", 400, "EMPTY_CART");
+
+  const {
+    itemsPrice: subtotal,
+    lineItems: items,
+    weight, length, width, height
+  } = await buildLineItems(resolvedItems);
+
+  const shippingFeeRes = await shippingProvider.calcShippingFee(2, 0, address.wardCode, address.districtId, weight, length, width, height, items);
+  if (!shippingFeeRes.success || !shippingFeeRes?.data?.total) throw new AppError("place order error", 500, "CALC_SHIPPING_FEE");
+  const shipping = shippingFeeRes.data.total;
+
+  req.resolvedItems = resolvedItems;
+  req.fromCart = fromCart;
+  req.fee = {
+    subtotal,
+    shipping
+  };
+  req.order = {
+    user: userId,
+    items,
+    shippingAddress: {
+      fullName: address.fullName,
+      phone: address.phone,
+
+      street: address.street,
+      wardName: address.ward,
+      districtName: address.district,
+      provinceName: address.province,
+
+      wardCode: address.wardCode,
+      districtId: address.districtId,
+      provinceId: address.provinceId
+    },
+    package: {
+      weight, height, width, length
+    }
+  };
+  next();
+}
+
+
+export const placeOrderV3 = async (req, res) => {
+  const session = await mongoose.startSession();
+  let newOrder;
+  try {
+    await session.withTransaction(async () => {
+      const discount = (await applyWelcomeDiscount(req.user._id)) ? Math.floor(req.fee.subtotal * 0.2) : 0;
+      const [created] = await Order.create(
+        [
+          {
+            ...req.order,
+            payment: {
+              method: "cod",
+              status: "pending"
+            },
+            fee: {
+              shipping: req.fee.shipping,
+              discount
+            },
+            status: "pending"
+          },
+        ],
+        { session }
+      );
+      newOrder = created;
+      await decrementStockInSession(req.resolvedItems, session);
+      if (req.fromCart) await User.findByIdAndUpdate(req.user._id, { cart: [] }, { session });
+    });
+  } finally {
+    session.endSession();
+  }
+  await sendOrderConfirmation({
+    to: req.user.email,
+    name: req.user.name,
+    orderId: newOrder.code,
+    items: newOrder.items,
+    totalPrice: newOrder.fee.total,
+    welcomeDiscount: newOrder.fee.discount !== 0,
+    welcomeDiscountAmount: newOrder.fee.discount,
+  }).catch((err) =>
+    logger.error("sendOrderConfirmation failed", { orderId: newOrder.code, error: err.message })
+  );
+  ApiResponse.created(newOrder, "Placed order successfully").send(res);
+}
+
+export const placeOrderStripeV3 = async (req, res) => {
+  const session = await mongoose.startSession();
+  let newOrder;
+  try {
+    await session.withTransaction(async () => {
+      const discount = (await applyWelcomeDiscount(req.user._id)) ? Math.floor(req.fee.subtotal * 0.2) : 0;
+      const [created] = await Order.create(
+        [
+          {
+            ...req.order,
+            payment: {
+              method: "bank",
+              status: "pending"
+            },
+            fee: {
+              shipping: req.fee.shipping,
+              discount
+            },
+            status: "pending"
+          },
+        ],
+        { session }
+      );
+      newOrder = created;
+    });
+  } finally {
+    session.endSession();
+  }
+
+  const stripeLineItems = newOrder.items.map((item) => ({
+    price_data: {
+      currency: STRIPE_CURRENCY,
+      product_data: { name: item.name },
+      unit_amount: item.price,
+    },
+    quantity: item.quantity,
+  }));
+  stripeLineItems.push({
+    price_data: {
+      currency: STRIPE_CURRENCY,
+      product_data: { name: "Phí vận chuyển" },
+      unit_amount: newOrder.fee.shipping,
+    },
+    quantity: 1,
+  });
+
+  const { origin = "https://test.org" } = req.headers;
+  const sessionObj = {
+    success_url: `${origin}/verify?success=true&orderId=${newOrder._id}&method=stripe&fromCart=${req.fromCart}`,
+    cancel_url: `${origin}/verify?success=false&orderId=${newOrder._id}&method=stripe&fromCart=${req.fromCart}`,
+    mode: "payment",
+    line_items: stripeLineItems,
+  };
+  if (newOrder.fee.discount > 0) {
+      const coupon = await getStripe().coupons.create({
+        amount_off: newOrder.fee.discount,
+        currency: STRIPE_CURRENCY,
+        duration: "once",
+      });
+      sessionObj.discounts = [
+        {
+          coupon: coupon.id,
+        }
+      ];
+  }
+  const stripeSession = await getStripe().checkout.sessions.create(sessionObj);
+
+  ApiResponse
+    .created({
+      session_url: stripeSession.url
+    }, "Stripe session created")
+    .send(res);
+}
+
+export const stripeCheckoutSession = async (req, res) => {
+    const { orderId, success, fromCart = "true" } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(orderId))
+    throw new ValidationError("Invalid order ID");
+
+  if (success === "true") {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const order = await Order.findById(orderId).session(session);
+        if (!order) throw new NotFoundError("Order");
+        if (order.user.toString() !== req.user._id.toString())
+          throw new ForbiddenError("Bạn không có quyền thao tác với đơn hàng này");
+        if (order.payment.status === "paid") return; // idempotent
+
+        await decrementStockInSession(order.items, session);
+        order.payment.status = "paid";
+        await order.save({ session });
+        if (fromCart === "true") {
+          await User.findByIdAndUpdate(req.user._id, { cart: [] }, { session });
+        }
+      });
+    } finally {
+      session.endSession();
+    }
+    ApiResponse.success("Thanh toán thành công").send(res);
+  } else {
+    // không revert lại discount nếu có -> thất bại xem như mất luôn -> đơn giản hóa
+    await Order.findByIdAndDelete(orderId);
+    throw new AppError("Thanh toán thất bại, đơn hàng đã hủy", 400, "STRIPE_PAYMENT_FAILED");
+  }
+}

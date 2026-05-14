@@ -64,7 +64,11 @@ const addressSchema = new mongoose.Schema(
       type: String,
       default: null,
       trim: true
-    }
+    },
+    district: String,
+    wardCode: String,
+    districtId: Number,
+    provinceId: Number,
   },
   {
     _id: true,

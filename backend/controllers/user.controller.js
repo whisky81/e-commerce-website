@@ -8,8 +8,22 @@ import AppError from "../errors/AppError.js";
 import ValidationError from "../errors/ValidationError.js";
 import NotFoundError from "../errors/NotFoundError.js";
 import { delImage } from "../config/cloudinary.js";
+import shippingProvider from "../config/shipping.js";
+import logger from "../config/Logger.js";
 
 export const profile = async (req, res) => {
+  const address = req.user.addresses.find((addr)=>addr.isDefault);
+  let estimatedDeliveryTime = null;
+  if (address) {
+    try {
+         const data = await shippingProvider.estimateDeliveryTime(0, address.districtId, address.wardCode);
+    estimatedDeliveryTime = data.data || null; 
+    } catch (error) {
+      logger.error("Shipping API Error", {
+        message: "Estimate delivery time error" 
+      });
+    }
+  }
   const user = {
     name: req.user.name,
     email: req.user.email,
@@ -20,7 +34,10 @@ export const profile = async (req, res) => {
     isEmailVerified: req.user.isEmailVerified,
     cart: req.user.cart,
     createdAt: req.user.createdAt,
-    updatedAt: req.user.updatedAt
+    updatedAt: req.user.updatedAt,
+
+    estimatedDeliveryTime,
+    
   };
   ApiResponse.success('Success', user).send(res);
 
@@ -246,3 +263,26 @@ export const removeFavorite = async (req, res) => {
     .findByIdAndUpdate(req.user._id, { $pull: { favorites: productId } });
   ApiResponse.success("Success").send(res);
 };
+
+export const v3AddAddr = async (req, res) => {
+  const {
+    fullName, phone,
+    street, ward, district, province,
+    wardCode, districtId, provinceId,
+    isDefault = false,
+    lat = null, lng = null , placeId = null
+  } = req.body;
+  const user = req.user;
+  if (isDefault) user.addresses.forEach(addr => addr.isDefault = false);
+  user.addresses.push({
+    fullName, phone,
+    street, ward, district, province,
+    wardCode, districtId, provinceId,
+    isDefault,
+    lat, lng, placeId: placeId
+  });
+  await user.save();
+  ApiResponse
+    .created(user.addresses[user.addresses.length - 1], "Address added successfully")
+    .send(res);
+}

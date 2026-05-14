@@ -70,7 +70,7 @@ class GhnAdapter extends IShippingAdapter {
         return {
             success: true,
             message: data.message,
-            data: provinces
+            data: provinces || []
         }
     }
     async districts(provinceId) {
@@ -139,7 +139,7 @@ class GhnAdapter extends IShippingAdapter {
             districtID: o.DistrictID,
             name: o.WardName,
             nameExtension: o.NameExtension,
-            status: o.Status
+            status: o.Status === 1
         }));
         return {
             success: true,
@@ -164,8 +164,7 @@ class GhnAdapter extends IShippingAdapter {
             weight, length, width, height,
             items: items.map(item => ({
                 name: item.name,
-                quantity: item.quantity,
-                code: item.code
+                quantity: item.quantity
             })),
         };
         const response = await fetch(
@@ -180,6 +179,7 @@ class GhnAdapter extends IShippingAdapter {
                 body: JSON.stringify(payload),
             }
         );
+        console.log(payload);
         if (!response.ok) {
             throw new ThirdPartyServiceError("Api Error", "ghn");
         }
@@ -208,7 +208,7 @@ class GhnAdapter extends IShippingAdapter {
         shopIdx = 0,
         toDistrict,
         toWard,
-        serviceId = 100039
+        serviceId = 53320
     ) {
         const response = await fetch(
             "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/leadtime",
@@ -231,47 +231,47 @@ class GhnAdapter extends IShippingAdapter {
         if (!response.ok) {
             throw new ThirdPartyServiceError("Api Error", "ghn");
         }
-        // {
-        //     "code": 200,
-        //     "message": "Success",
-        //     "data": {
-        //         "leadtime": 1778864399,
-        //         "leadtime_order": {
-        //             "from_estimate_date": "2026-05-15T16:59:59Z",
-        //             "to_estimate_date": "2026-05-15T16:59:59Z"
-        //         }
-        //     }
-        // }
         const data = await response.json();
+        const leadtime = data.data.leadtime;
+        const diffMs = new Date(leadtime * 1000).getTime() - Date.now();
+        const days = Math.floor(diffMs / 86400000);
+        const hours = Math.floor((diffMs % 86400000) / 3600000);
+        const minutes = Math.floor((diffMs % 3600000) / 60000);
         return {
             success: true,
             message: data.message,
-            data: data.data
+            data: {
+                leadtime,
+                deliveryTimeRemaining: {
+                    days,
+                    hours,
+                    minutes
+                }
+            }
         }
     }
     async placeOrder(shopIdx = 0, order) {
-        const isCOD = order.paymentMethod === "cod";
+        const isCOD = order.payment.method === "cod";
         const payload = {
-            to_name: order.recipient.name,
-            to_phone: order.recipient.phone,
-            to_address: order.recipient.address,
-            to_ward_name: order.recipient.ward,
-            to_district_name: order.recipient.district,
-            to_province_name: order.recipient.province,
-            cod_amount: isCOD ? order.totalAmount : 0,
+            to_name: order.shippingAddress.fullName,
+            to_phone: order.shippingAddress.phone,
+            to_address: "todo",
+            to_ward_name: order.shippingAddress.wardName,
+            to_district_name: order.shippingAddress.districtName,
+            to_province_name: order.shippingAddress.provinceName,
+            cod_amount: Math.min(isCOD ? order.totalAmount : 0, 50_000_000),
             payment_type_id: order.shippingFeeBearer === 'buyer' ? 2 : 1,
             service_type_id: 2,
             required_note: 'KHONGCHOXEMHANG',
-            weight: order.totalWeight,
-            length: order.package.length,
-            width: order.package.width,
-            height: order.package.height,
-            insurance_value: order.totalAmount, // <= 5_000_000
+            weight: Math.min(order.totalWeight, 50_000),
+            length: Math.min(order.package.length, 200),
+            width: Math.min(order.package.width, 200),
+            height: Math.min(order.package.height, 200),
+            insurance_value: Math.min(order.totalAmount, 5_000_000), // <= 5_000_000
             items: order.items.map(item => ({
                 name: item.name,
                 quantity: item.quantity,
-                price: item.price,
-                code: item.code
+                price: item.price
             })),
         };
         const res = await fetch(
