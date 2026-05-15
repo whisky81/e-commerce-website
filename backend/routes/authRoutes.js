@@ -1,7 +1,7 @@
 // backend/routes/authRoutes.js
 import express from "express";
 import {
-  register, login, logout,
+  register, login, logout, adminLogin,
   verifyEmail, resendVerification
 } from "../controllers/auth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
@@ -12,6 +12,7 @@ const authRoutes = express.Router();
 
 authRoutes.post("/register",            catchAsync(register));
 authRoutes.post("/login",               catchAsync(login));
+authRoutes.post("/admin-login",         catchAsync(adminLogin));
 authRoutes.post("/logout",   protect,   catchAsync(logout));
 authRoutes.get ("/verify-email",        catchAsync(verifyEmail));
 authRoutes.post("/resend-verification", protect, catchAsync(resendVerification));

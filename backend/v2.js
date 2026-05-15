@@ -5,6 +5,7 @@ import "dotenv/config";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import connectCloudinary from "./config/cloudinary.js";
+import seedAdmin from "./config/seedAdmin.js";
 import passport from "./config/passport.js";
 import logger from "./config/Logger.js";
 import shippingProvider from "./config/shipping.js";
@@ -25,17 +26,18 @@ import requestLogger from "./middleware/requestLogger.js";
 import addrRoutes from "./routes/v3/addressRoutes.js";
 import orderRoutesV3 from "./routes/v3/orderRoutes.js";
 import adminRoutesV3 from "./routes/v3/adminRoutes.js";
+import shippingRoutesV3 from "./routes/v3/shippingRoutes.js";
 
 const app  = express();
 const port = process.env.PORT || 5000;
 
 connectDB();
 connectCloudinary();
+seedAdmin();
 console.log(shippingProvider);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// CORS must be first so preflight OPTIONS requests are handled before body parsers
 app.use(cors({
   origin: [
     "http://localhost:5173",
@@ -45,6 +47,8 @@ app.use(cors({
   credentials: true,
   optionsSuccessStatus: 200,
 }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(passport.initialize());
 
@@ -65,6 +69,7 @@ app.use("/api/subscribers", subscriberRoutes);
 app.use("/api/v3/addresses/3-level", addrRoutes);
 app.use("/api/v3/admin", adminRoutesV3);
 app.use("/api/v3", orderRoutesV3);
+app.use("/api/v3/shipping", shippingRoutesV3);
 
 
 app.get("/", (req, res) => {

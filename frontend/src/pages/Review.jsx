@@ -91,7 +91,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
             if (newReview.media[0]) formData.append("media1", newReview.media[0]);
             if (newReview.media[1]) formData.append("media2", newReview.media[1]);
 
-            let response = await axios.post(
+            const response = await axios.post(
                 backendUrl + "/api/reviews",
                 formData,
                 { withCredentials: true }
@@ -99,12 +99,10 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
             if (!response.data.success) {
                 throw new Error(response.data.message);
             }
-            response = await axios.get(
-                backendUrl + `/api/products/${productId}`,
-                { withCredentials: true }
-            );
-            if (response.data.success) {
-                setReviews(response.data.data.reviews || response.data.data);
+            // Prepend the new review to the list immediately (no refetch needed)
+            const createdReview = response.data.data;
+            if (createdReview) {
+              setReviews(prev => [createdReview, ...prev]);
             }
             setNewReview({ rating: 0, comment: '', media: [] });
             setShowReviewForm(false);
@@ -185,6 +183,14 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                 >
                     {showReviewForm ? 'Hủy' : 'Viết đánh giá'}
                 </button>
+                {!showReviewForm && (
+                  <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Bạn cần mua sản phẩm này để có thể đánh giá
+                  </p>
+                )}
             </div>
 
             {/* Form */}
@@ -381,7 +387,11 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                                             )}
                                             <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-black/50 
                                        text-white text-xs rounded">
-                                                {item.isVideo ? '🎥' : '📷'}
+                                                {item.isVideo ? (
+  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+) : (
+  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+)}
                                             </span>
                                         </div>
                                     ))}
@@ -390,7 +400,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
 
                             <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
                                 <button className="flex items-center gap-1 hover:text-blue-500 transition-colors whitespace-nowrap">
-                                    <span>👍</span>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" /></svg>
                                     <span>Hữu ích ({review.helpful || 0})</span>
                                 </button>
                                 <button className="hover:text-blue-500 transition-colors whitespace-nowrap">

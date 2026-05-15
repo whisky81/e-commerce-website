@@ -8,22 +8,8 @@ import AppError from "../errors/AppError.js";
 import ValidationError from "../errors/ValidationError.js";
 import NotFoundError from "../errors/NotFoundError.js";
 import { delImage } from "../config/cloudinary.js";
-import shippingProvider from "../config/shipping.js";
-import logger from "../config/Logger.js";
 
 export const profile = async (req, res) => {
-  const address = req.user.addresses.find((addr)=>addr.isDefault);
-  let estimatedDeliveryTime = null;
-  if (address) {
-    try {
-         const data = await shippingProvider.estimateDeliveryTime(0, address.districtId, address.wardCode);
-    estimatedDeliveryTime = data.data || null; 
-    } catch (error) {
-      logger.error("Shipping API Error", {
-        message: "Estimate delivery time error" 
-      });
-    }
-  }
   const user = {
     name: req.user.name,
     email: req.user.email,
@@ -35,12 +21,8 @@ export const profile = async (req, res) => {
     cart: req.user.cart,
     createdAt: req.user.createdAt,
     updatedAt: req.user.updatedAt,
-
-    estimatedDeliveryTime,
-    
   };
   ApiResponse.success('Success', user).send(res);
-
 };
 
 export const updateProfile = async (req, res) => {
@@ -264,6 +246,10 @@ export const removeFavorite = async (req, res) => {
   ApiResponse.success("Success").send(res);
 };
 
+export const getUserAddressesV3 = async (req, res) => {
+  ApiResponse.success("Success", req.user.addresses || []).send(res);
+};
+
 export const v3AddAddr = async (req, res) => {
   const {
     fullName, phone,
@@ -285,4 +271,56 @@ export const v3AddAddr = async (req, res) => {
   ApiResponse
     .created(user.addresses[user.addresses.length - 1], "Address added successfully")
     .send(res);
+}
+
+export const v3UpdateAddr = async (req, res) => {
+  const { addressId } = req.params;
+  const {
+    fullName, phone,
+    street, ward, district, province,
+    wardCode, districtId, provinceId,
+    isDefault = false,
+    lat = null, lng = null, placeId = null
+  } = req.body;
+
+  if (!fullName || !phone || !street || !ward || !district || !province) {
+    throw new AppError("Missing address fields", 400, "MISSING_ADDRESS_FIELDS");
+  }
+
+  const user = req.user;
+  const addr = user.addresses.id(addressId);
+  if (!addr) throw new NotFoundError("Address");
+
+  if (isDefault) user.addresses.forEach(a => a.isDefault = false);
+
+  Object.assign(addr, {
+    fullName, phone, street, ward, district, province,
+    wardCode, districtId, provinceId,
+    isDefault, lat, lng, placeId
+  });
+
+  await user.save();
+  ApiResponse.success("Address updated successfully", addr).send(res);
+}
+
+export const v3DeleteAddrs = async (req, res) => {
+  const { bulk } = req.body;
+  if (!bulk || !Array.isArray(bulk) || bulk.length === 0) {
+    throw new AppError("Please provide an array of address ids", 400, "BAD_REQUEST");
+  }
+  const validIds = bulk.every(id => mongoose.Types.ObjectId.isValid(id));
+  if (!validIds) throw new ValidationError("Invalid address ids");
+
+  const existingAddresses = req.user.addresses.filter(
+    address => bulk.includes(address._id.toString())
+  );
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user._id,
+    { $pull: { addresses: { _id: { $in: bulk } } } },
+    { new: true }
+  ).select("addresses");
+
+  new ApiResponse(true, 200, "Addresses deleted successfully", updatedUser.addresses, {
+    deletedAddressesCount: existingAddresses.length
+  }).send(res);
 }

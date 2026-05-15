@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import AddressForm from "../components/AddressForm";
+import { saveAddress as saveAddressV3, updateAddress as updateAddressV3, deleteAddresses } from "../api/v3/addresses";
 
 const User = () => {
   const { user, navigate, isAuthenticated, backendUrl } = useShopContext();
@@ -30,22 +31,14 @@ const User = () => {
     setEditingAddress(null);
   };
 
-  const saveAddress = async (formData) => {
+  const handleSaveAddress = async (formData) => {
     try {
       if (editingAddress) {
-        const response = await axios.put(
-          `${backendUrl}/api/users/addresses/${editingAddress._id}`,
-          formData,
-          { withCredentials: true }
-        );
+        const response = await updateAddressV3(editingAddress._id, formData);
         if (!response.data.success) throw new Error(response.data.message);
         toast.success("Cập nhật địa chỉ thành công");
       } else {
-        const response = await axios.post(
-          `${backendUrl}/api/users/addresses`,
-          formData,
-          { withCredentials: true }
-        );
+        const response = await saveAddressV3(formData);
         if (!response.data.success) throw new Error(response.data.message);
         toast.success("Thêm địa chỉ thành công");
       }
@@ -75,22 +68,26 @@ const User = () => {
       const res = await axios.post(`${backendUrl}/api/users/avatar`, form, { withCredentials: true });
       if (res.data.success) {
         toast.success("Cập nhật ảnh đại diện thành công");
+        const newAvatarUrl = res.data.data?.url;
+        if (newAvatarUrl) {
+          queryClient.setQueryData(['profile'], (old) => {
+            if (!old) return old;
+            return { ...old, avatar: { url: newAvatarUrl, publicId: res.data.data?.publicId } };
+          });
+        }
         await queryClient.invalidateQueries({ queryKey: ['profile'] });
       } else throw new Error(res.data.message);
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || "Upload thất bại");
     } finally {
       setUploading(false);
-      e.target.value = "";
+      e.target.value = '';
     }
   };
 
   const deleteAddr = async (id) => {
     try {
-      const response = await axios.delete(
-        backendUrl + `/api/users/addresses`,
-        { data: { bulk: [id] }, withCredentials: true }
-      );
+      const response = await deleteAddresses([id]);
       if (!response.data.success) throw new Error(response.data.message);
       toast.success(response.data.message);
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -112,7 +109,8 @@ const User = () => {
   }
 
   const avatarUrl = user.avatar?.url
-    || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4F46E5&color=fff&size=160&bold=true`;
+    ? `${user.avatar.url}?t=${user.updatedAt || Date.now()}`
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4F46E5&color=fff&size=160&bold=true`;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
@@ -255,7 +253,7 @@ const User = () => {
                       <a href={`https://www.google.com/maps?q=${addr.lat},${addr.lng}`}
                         target="_blank" rel="noopener noreferrer"
                         className="mt-2 ml-5 text-xs text-indigo-600 hover:underline inline-flex items-center gap-1">
-                        📍 Xem trên Google Maps
+                        <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg> Xem trên Google Maps
                       </a>
                     )}
 
@@ -302,7 +300,7 @@ const User = () => {
               <div className="p-6">
                 <AddressForm 
                   initialData={editingAddress}
-                  onSubmit={saveAddress}
+                  onSubmit={handleSaveAddress}
                   onCancel={closeAddressModal}
                 />
               </div>

@@ -1,22 +1,92 @@
 // frontend/src/pages/Cart.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import useShopContext from "../hooks/useShopContext";
 import Title from "../components/Title";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
+import { estimateShippingFee } from "../api/v3/shipping";
+import { getUserAddresses } from "../api/v3/addresses";
+
+const fmt = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
+
+const formatEta = (etaDate) => {
+  if (!etaDate) return null;
+  const d = new Date(etaDate);
+  const now = new Date();
+  const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return "Hôm nay";
+  if (diffDays === 1) return "Ngày mai";
+  return `${d.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' })}`;
+};
 
 const Cart = () => {
-  const { cartItems, updateQuantity, navigate } = useShopContext();
-  const cartData = React.useMemo(() => Object.values(cartItems), [cartItems]);
+  const { cartItems, updateQuantity, navigate, isAuthenticated, user } = useShopContext();
+  const cartData = useMemo(() => Object.values(cartItems), [cartItems]);
   const [selectedItems, setSelectedItems] = useState(new Set());
+  const [shippingFee, setShippingFee] = useState(null); // null = not yet calculated
+  const [estimatedEta, setEstimatedEta] = useState(null);
+  const [feeLoading, setFeeLoading] = useState(false);
 
+  // Address state
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+
+  // Load user addresses
   useEffect(() => {
-    // Auto-select tất cả khi cart thay đổi, nhưng giữ lại các item đang được chọn
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const res = await getUserAddresses();
+        if (res.data.success) {
+          const list = res.data.data || [];
+          setAddresses(list);
+          const def = list.find(a => a.isDefault) || list[0] || null;
+          setSelectedAddress(def);
+        }
+      } catch { /* silently fail */ }
+    })();
+  }, [isAuthenticated, user]); // re-fetch when user changes
+
+  // Estimate shipping fee when selected items or address changes
+  useEffect(() => {
+    if (!isAuthenticated || selectedItems.size === 0 || !selectedAddress?._id) {
+      setShippingFee(null);
+      setEstimatedEta(null);
+      return;
+    }
+    const items = cartData
+      .filter(item => selectedItems.has(item.id))
+      .map(item => ({ product: item.id, quantity: item.quantity }));
+    if (items.length === 0) return;
+
+    let cancelled = false;
+    const run = async () => {
+      setFeeLoading(true);
+      try {
+        const res = await estimateShippingFee({ items, addressId: selectedAddress._id });
+        if (!cancelled && res.data.success) {
+          const data = res.data.data;
+          setShippingFee(data.shippingFee || data.total || 20000);
+          if (data.estimatedDeliveryTime) {
+            setEstimatedEta(data.estimatedDeliveryTime);
+          }
+        }
+      } catch {
+        if (!cancelled) setShippingFee(20000);
+      } finally {
+        if (!cancelled) setFeeLoading(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [selectedItems, selectedAddress, isAuthenticated, cartData]);
+
+  // Auto-select all when cart changes
+  useEffect(() => {
     setSelectedItems(prev => {
       if (prev.size === 0 && cartData.length > 0) {
         return new Set(cartData.map(item => item.id));
       }
-      // Loại bỏ những item đã bị xóa khỏi cart
       const validIds = new Set(cartData.map(item => item.id));
       return new Set([...prev].filter(id => validIds.has(id)));
     });
@@ -44,7 +114,6 @@ const Cart = () => {
       toast.warning("Vui lòng chọn ít nhất một sản phẩm để mua");
       return;
     }
-    // ✅ Chỉ truyền đúng các item được chọn, không truyền toàn bộ cart
     const selectedCartItems = cartData.filter(item => selectedItems.has(item.id));
     navigate("/place-order", { state: { selectedCartItems } });
   };
@@ -52,6 +121,8 @@ const Cart = () => {
   const selectedTotal = cartData
     .filter(item => selectedItems.has(item.id))
     .reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const displayShipFee = shippingFee ?? 20000;
 
   if (cartData.length === 0) {
     return (
@@ -154,6 +225,45 @@ const Cart = () => {
         <div className="lg:col-span-1">
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-6 sticky top-24 shadow-sm">
             <h3 className="font-bold text-lg text-slate-900 mb-4">Tóm tắt đơn hàng</h3>
+
+            {/* Address selector */}
+            {addresses.length > 0 && (
+              <div className="mb-4 pb-4 border-b border-blue-200">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">
+                  Địa chỉ giao hàng
+                </label>
+                <select
+                  value={selectedAddress?._id || ""}
+                  onChange={(e) => {
+                    const addr = addresses.find(a => a._id === e.target.value);
+                    setSelectedAddress(addr || null);
+                  }}
+                  className="w-full p-2 rounded-lg border border-blue-200 bg-white text-sm text-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 outline-none"
+                >
+                  {addresses.map(addr => (
+                    <option key={addr._id} value={addr._id}>
+                      {addr.fullName} — {addr.street}, {addr.ward}, {addr.district}
+                      {addr.isDefault ? ' (Mặc định)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {!selectedAddress && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Vui lòng thêm địa chỉ trong trang cá nhân
+                  </p>
+                )}
+              </div>
+            )}
+
+            {addresses.length === 0 && (
+              <div className="mb-4 pb-4 border-b border-blue-200">
+                <p className="text-sm text-amber-600">
+                  Bạn chưa có địa chỉ giao hàng.{' '}
+                  <Link to="/user" className="text-indigo-600 underline">Thêm ngay</Link>
+                </p>
+              </div>
+            )}
+
             <div className="space-y-3 mb-6 pb-6 border-b border-blue-200">
               <div className="flex justify-between text-slate-700">
                 <span>Sản phẩm chọn:</span>
@@ -162,18 +272,33 @@ const Cart = () => {
               <div className="flex justify-between text-slate-700">
                 <span>Tạm tính:</span>
                 <span className="font-semibold text-blue-600">
-                  {selectedTotal.toLocaleString("vi-VN")} ₫
+                  {fmt(selectedTotal)}
                 </span>
               </div>
               <div className="flex justify-between text-slate-700">
                 <span>Vận chuyển:</span>
-                <span className="font-semibold">20.000 ₫</span>
+                <span className="font-semibold">
+                  {feeLoading ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="animate-spin rounded-full h-3 w-3 border-2 border-blue-400 border-t-transparent" />
+                      Đang tính...
+                    </span>
+                  ) : selectedItems.size > 0 ? (
+                    fmt(displayShipFee)
+                  ) : '—'}
+                </span>
               </div>
+              {estimatedEta && (
+                <div className="flex justify-between text-slate-700">
+                  <span>Dự kiến giao:</span>
+                  <span className="font-semibold text-emerald-600">{formatEta(estimatedEta)}</span>
+                </div>
+              )}
             </div>
             <div className="flex justify-between mb-6 text-lg">
               <span className="font-bold text-slate-900">Tổng cộng:</span>
               <span className="font-bold text-blue-600">
-                {(selectedTotal + (selectedItems.size > 0 ? 20000 : 0)).toLocaleString("vi-VN")} ₫
+                {fmt(selectedTotal + (selectedItems.size > 0 ? displayShipFee : 0))}
               </span>
             </div>
             <button

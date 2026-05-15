@@ -65,6 +65,20 @@ export const login = async (req, res) => {
   sendToken(res, user._id, user.role, 200, "Logged in successfully.");
 };
 
+export const adminLogin = async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password)
+    throw new AppError("Missing email or password", 400, "MISSING_EMAIL_OR_PASSWORD");
+  const user = await User.findOne({ email }).select("+password");
+  if (!user)
+    throw new NotFoundError("User does not exist, please sign up.");
+  if (user.role !== "admin")
+    throw new AppError("Tài khoản không có quyền quản trị", 403, "NOT_ADMIN");
+  if (!await bcrypt.compare(password, user.password))
+    throw new AppError("Incorrect password", 400, "INCORRECT_PASSWORD");
+  sendToken(res, user._id, user.role, 200, "Admin logged in successfully.");
+};
+
 export const logout = async (req, res) => {
   // enhanced: short lived token + refresh token
   res.cookie("token", "", {

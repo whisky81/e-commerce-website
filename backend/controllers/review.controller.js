@@ -1,10 +1,12 @@
 import Product from "../models/Product.js";
 import Review from "../models/Review.js";
+import Order from "../models/Order.js";
 import { v2 as cloudinary } from "cloudinary";
 import MissingRequiredFieldError from "../errors/MissingRequiredFieldError.js";
 import NotFoundError from "../errors/NotFoundError.js";
 import CastError from "../errors/CastError.js";
 import ValidationError from "../errors/ValidationError.js";
+import ForbiddenError from "../errors/ForbiddenError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 
 export const createReview = async (req, res) => {
@@ -24,6 +26,15 @@ export const createReview = async (req, res) => {
     if (!existingProduct) {
         throw new NotFoundError('Product');
     }
+
+    // Verify user has purchased this product (at least one delivered order)
+    const hasPurchased = await Order.exists({
+        user: userId,
+        "items.product": productId,
+        status: { $in: ["delivered", "shipping"] }
+    });
+    if (!hasPurchased)
+        throw new ForbiddenError('Bạn cần mua sản phẩm này trước khi đánh giá');
 
     if (!(
         typeof rating === "string" &&
@@ -54,13 +65,16 @@ export const createReview = async (req, res) => {
         })
     )
 
-    const newReview = await Review.create({
+    let newReview = await Review.create({
         user: userId,
         product: productId,
         rating,
         comment,
         media: mediasUrl
     })
+
+    // Populate user for immediate frontend append
+    newReview = await newReview.populate("user", "name avatar");
 
     ApiResponse.created(newReview).send(res);
 }

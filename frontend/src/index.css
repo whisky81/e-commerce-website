@@ -37,3 +37,4 @@ a.active hr {
         color: white;
     }
 }
+@import './styles/animations.css';

@@ -20,6 +20,7 @@ const List = () => {
   const [deletingId, setDeletingId] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null) // 'single' id or 'bulk'
   const queryClient = useQueryClient()
 
   const { data, isLoading, isError, error } = useQuery({
@@ -46,8 +47,14 @@ const List = () => {
     },
   })
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return
+  const handleDelete = (id) => {
+    setConfirmDelete(id)
+  }
+
+  const confirmDeleteAction = async () => {
+    const id = confirmDelete
+    setConfirmDelete(null)
+    if (!id) return
     setDeletingId(id)
     try {
       await deleteMutation.mutateAsync([id])
@@ -72,10 +79,13 @@ const List = () => {
     }
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.length === 0) return
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} sản phẩm đã chọn?`)) return
-    
+    setConfirmDelete('bulk')
+  }
+
+  const confirmBulkDeleteAction = async () => {
+    setConfirmDelete(null)
     setBulkDeleting(true)
     try {
       await deleteMutation.mutateAsync(selectedIds)
@@ -91,7 +101,7 @@ const List = () => {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <span className="text-5xl mb-4">⚠️</span>
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center"><svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
         <h3 className="text-lg font-semibold text-gray-700 mb-1">Lỗi tải dữ liệu</h3>
         <p className="text-sm text-gray-500 mb-4">{error?.message || "Không thể tải danh sách sản phẩm"}</p>
         <button
@@ -130,7 +140,7 @@ const List = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {products.length === 0 ? (
-          <EmptyState icon="📦" title="Chưa có sản phẩm nào"
+          <EmptyState icon="package" title="Chưa có sản phẩm nào"
             description="Thêm sản phẩm đầu tiên để bắt đầu bán hàng."
             action={<Link to="/add" className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">+ Thêm sản phẩm</Link>} />
         ) : (
@@ -264,5 +274,48 @@ const List = () => {
     </div>
   )
 }
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={20} className="text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-slate-900">Xóa sản phẩm</h3>
+                <p className="text-sm text-slate-600 mt-0.5">
+                  {confirmDelete === 'bulk'
+                    ? `Bạn có chắc chắn muốn xóa ${selectedIds.length} sản phẩm đã chọn?`
+                    : 'Bạn có chắc chắn muốn xóa sản phẩm này?'}
+                  {' '}Hành động này không thể hoàn tác.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deletingId || bulkDeleting}
+                className="px-4 py-2.5 text-sm font-medium text-slate-700 border-2 border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmDelete === 'bulk' ? confirmBulkDeleteAction : confirmDeleteAction}
+                disabled={deletingId || bulkDeleting}
+                className="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {(deletingId || bulkDeleting) ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white" />
+                    Đang xóa...
+                  </>
+                ) : confirmDelete === 'bulk' ? `Xóa ${selectedIds.length} sản phẩm` : 'Xóa sản phẩm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
 export default List

@@ -28,6 +28,13 @@ export function AuthProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  // Listen for auth:unauthorized events (from api client 401 interceptor)
+  useEffect(() => {
+    const handler = () => setUser(undefined);
+    window.addEventListener("auth:unauthorized", handler);
+    return () => window.removeEventListener("auth:unauthorized", handler);
+  }, []);
+
   const login = useCallback(async (loginResponseData) => {
     // First set the minimal user data from login to trigger isAuthenticated
     setUser(loginResponseData);

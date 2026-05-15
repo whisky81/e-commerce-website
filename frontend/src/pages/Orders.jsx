@@ -7,6 +7,8 @@ import axios from "axios";
 import Address from "../components/Address";
 import ProductRow from "../components/ProductRow";
 import { formatPrice, formatDate } from "../utils/formats";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { getUserOrders, cancelOrder as cancelOrderV3 } from "../api/v3/orders";
 
 const Orders = () => {
   const { backendUrl, isAuthenticated, navigate } = useShopContext();
@@ -14,6 +16,7 @@ const Orders = () => {
   const [loading,       setLoading]       = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [cancelling,    setCancelling]    = useState(null);
+  const [cancelTarget,  setCancelTarget]  = useState(null);
 
   // ─── Support modal state ───────────────────────────────────────────────────
   const [supportOrder,   setSupportOrder]   = useState(null);
@@ -24,10 +27,10 @@ const Orders = () => {
     if (!isAuthenticated) { navigate("/login"); return; }
     try {
       setLoading(true);
-      const response = await axios.get(backendUrl + "/api/orders/me", { withCredentials: true });
+      const response = await getUserOrders();
       if (response.status === 401) { navigate("/login"); return; }
       if (!response.data.success) throw new Error(response.data.message);
-      setOrders(response.data.data);
+      setOrders(response.data.data || response.data);
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Không thể tải đơn hàng");
     } finally {
@@ -41,10 +44,17 @@ const Orders = () => {
 
   // ─── Cancel order ─────────────────────────────────────────────────────────
   const handleCancelOrder = async (orderId) => {
-    if (!window.confirm("Bạn chắc chắn muốn hủy đơn hàng này?")) return;
+    setCancelTarget(orderId);
+    return;
+  };
+
+  const confirmCancelOrder = async () => {
+    const orderId = cancelTarget;
+    setCancelTarget(null);
+    if (!orderId) return;
     setCancelling(orderId);
     try {
-      const res = await axios.patch(`${backendUrl}/api/orders/${orderId}/cancel`, {}, { withCredentials: true });
+      const res = await cancelOrderV3(orderId);
       if (res.data.success) {
         toast.success(res.data.message);
         fetchOrdersData();
@@ -249,6 +259,18 @@ const Orders = () => {
           })}
         </div>
       )}
+
+      {/* Cancel order confirmation */}
+      <ConfirmDialog
+        show={!!cancelTarget}
+        title="Hủy đơn hàng"
+        message="Bạn chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác."
+        variant="danger"
+        confirmLabel="Hủy đơn hàng"
+        onConfirm={confirmCancelOrder}
+        onCancel={() => setCancelTarget(null)}
+        loading={!!cancelling}
+      />
 
       {/* ✅ Support Modal */}
       {supportOrder && (

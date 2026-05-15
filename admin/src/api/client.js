@@ -11,10 +11,11 @@ apiClient.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      // Don't reload for the profile check — 401 is expected when not logged in
+      // Don't dispatch for the profile check — 401 is expected when not logged in
       const isProfileCheck = error.config?.url?.includes("/api/users/profile");
       if (!isProfileCheck) {
-        window.location.reload(); // triggers AuthProvider re-init → will show login
+        // Dispatch custom event instead of hard reload — preserves state
+        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
       }
     }
     return Promise.reject(error);

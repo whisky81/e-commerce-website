@@ -21,7 +21,7 @@ export const backendUrl = import.meta.env.VITE_BACKEND_URL
 export const currency = '₫'
 
 const App = () => {
-  const { isInitialized, isAuthenticated, user } = useAuth()
+  const { isInitialized, isAuthenticated, user, logout } = useAuth()
 
   if (!isInitialized) {
     return (
