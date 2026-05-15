@@ -1,8 +1,7 @@
-import axios from 'axios'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
-import { backendUrl } from '../App'
 import { Link } from 'react-router-dom'
+import { getProfile } from '../api/auth'
 
 const Home = () => {
   const [userData, setUserData] = useState(null)
@@ -10,10 +9,7 @@ const Home = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await axios.get(
-        backendUrl + '/api/v2/users/profile',
-        { withCredentials: true }
-      )
+      const response = await getProfile()
       if (response.data.success) {
         setUserData(response.data.data)
       } else {

@@ -1,16 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import useShopContext from '../hooks/useShopContext'
 import Title from './Title'
 import ProductItem from './ProductItem'
 
 const BestSeller = () => {
     const { products } = useShopContext();
-    const [bestSeller, setBestSeller] = useState([]);
-
-    useEffect(() => {
-        // Sort by soldCount desc, take top 5
+    const bestSeller = React.useMemo(() => {
         const sorted = [...products].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0));
-        setBestSeller(sorted.slice(0, 5));
+        return sorted.slice(0, 5);
     }, [products]);
 
     return (
@@ -33,6 +30,7 @@ const BestSeller = () => {
                         salePrice={item.salePrice}
                         discount={item.discount}
                         soldCount={item.soldCount}
+                        saleEndAt={item.saleEndAt}
                     />
                 ))}
             </div>

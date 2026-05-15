@@ -1,5 +1,5 @@
 // frontend/src/pages/Orders.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import useShopContext from "../hooks/useShopContext";
 import Title from "../components/Title";
 import { toast } from "react-toastify";
@@ -7,6 +7,8 @@ import axios from "axios";
 import Address from "../components/Address";
 import ProductRow from "../components/ProductRow";
 import { formatPrice, formatDate } from "../utils/formats";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { getUserOrders, cancelOrder as cancelOrderV3 } from "../api/v3/orders";
 
 const Orders = () => {
   const { backendUrl, isAuthenticated, navigate } = useShopContext();
@@ -14,39 +16,45 @@ const Orders = () => {
   const [loading,       setLoading]       = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [cancelling,    setCancelling]    = useState(null);
+  const [cancelTarget,  setCancelTarget]  = useState(null);
 
   // ─── Support modal state ───────────────────────────────────────────────────
   const [supportOrder,   setSupportOrder]   = useState(null);
   const [supportMsg,     setSupportMsg]     = useState("");
   const [sendingSupport, setSendingSupport] = useState(false);
 
-  const fetchOrdersData = async () => {
+  const fetchOrdersData = useCallback(async () => {
+    if (!isAuthenticated) { navigate("/login"); return; }
     try {
       setLoading(true);
-      if (!isAuthenticated) { navigate("/login"); return; }
-      const response = await axios.get(backendUrl + "/api/v2/orders/my", { withCredentials: true });
+      const response = await getUserOrders();
       if (response.status === 401) { navigate("/login"); return; }
       if (!response.data.success) throw new Error(response.data.message);
-      setOrders(response.data.data);
+      setOrders(response.data.data || response.data);
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message || "Không thể tải đơn hàng");
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, backendUrl, navigate]);
 
-  useEffect(() => { fetchOrdersData(); }, [isAuthenticated]);
+  useEffect(() => {
+    if (isAuthenticated) fetchOrdersData();
+  }, [isAuthenticated, fetchOrdersData]);
 
   // ─── Cancel order ─────────────────────────────────────────────────────────
   const handleCancelOrder = async (orderId) => {
-    if (!window.confirm("Bạn chắc chắn muốn hủy đơn hàng này?")) return;
+    setCancelTarget(orderId);
+    return;
+  };
+
+  const confirmCancelOrder = async () => {
+    const orderId = cancelTarget;
+    setCancelTarget(null);
+    if (!orderId) return;
     setCancelling(orderId);
     try {
-      const res = await axios.patch(
-        `${backendUrl}/api/v2/orders/${orderId}/cancel`,
-        {},
-        { withCredentials: true }
-      );
+      const res = await cancelOrderV3(orderId);
       if (res.data.success) {
         toast.success(res.data.message);
         fetchOrdersData();
@@ -63,11 +71,7 @@ const Orders = () => {
     if (!supportMsg.trim()) { toast.warning("Vui lòng nhập nội dung hỗ trợ"); return; }
     setSendingSupport(true);
     try {
-      const res = await axios.post(
-        `${backendUrl}/api/v2/orders/${supportOrder._id}/contact`,
-        { message: supportMsg },
-        { withCredentials: true }
-      );
+      const res = await axios.post(`${backendUrl}/api/orders/${supportOrder._id}/contact`, { message: supportMsg }, { withCredentials: true });
       if (res.data.success) {
         toast.success(res.data.message);
         setSupportOrder(null);
@@ -138,7 +142,7 @@ const Orders = () => {
                     </span>
                     {order.welcomeDiscount && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                        🎉 Ưu đãi 20%
+                        <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg> Ưu đãi 20%
                       </span>
                     )}
                   </div>
@@ -162,7 +166,7 @@ const Orders = () => {
                       {order.items.map((item, idx) => (
                         <ProductRow
                           key={idx}
-                          image={item.image} name={item.name}
+                          image={item.image?.url || item.image} name={item.name}
                           productId={item.product} price={item.price} quantity={item.quantity}
                         />
                       ))}
@@ -172,7 +176,7 @@ const Orders = () => {
                     {order.welcomeDiscount && (
                       <div className="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm">
                         <p className="text-emerald-700 font-medium">
-                          🎉 Ưu đãi chào mừng 20% đã được áp dụng – Tiết kiệm: {formatPrice(order.welcomeDiscountAmount)}
+                          <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg> Ưu đãi chào mừng 20% đã được áp dụng – Tiết kiệm: {formatPrice(order.welcomeDiscountAmount)}
                         </p>
                       </div>
                     )}
@@ -229,7 +233,7 @@ const Orders = () => {
                         <button
                           disabled={cancelling === order._id}
                           onClick={() => handleCancelOrder(order._id)}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium disabled:opacity-50"
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                           {cancelling === order._id ? (
                             <span className="flex items-center gap-2">
@@ -243,9 +247,9 @@ const Orders = () => {
                       {/* ✅ Liên hệ hỗ trợ */}
                       <button
                         onClick={() => { setSupportOrder(order); setSupportMsg(""); }}
-                        className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm font-medium text-gray-700"
+                        className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm font-medium text-gray-700 cursor-pointer"
                       >
-                        📧 Liên hệ hỗ trợ
+                        <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> Liên hệ hỗ trợ
                       </button>
                     </div>
                   </div>
@@ -256,23 +260,35 @@ const Orders = () => {
         </div>
       )}
 
+      {/* Cancel order confirmation */}
+      <ConfirmDialog
+        show={!!cancelTarget}
+        title="Hủy đơn hàng"
+        message="Bạn chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác."
+        variant="danger"
+        confirmLabel="Hủy đơn hàng"
+        onConfirm={confirmCancelOrder}
+        onCancel={() => setCancelTarget(null)}
+        loading={!!cancelling}
+      />
+
       {/* ✅ Support Modal */}
       {supportOrder && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-bold text-lg">📧 Liên hệ hỗ trợ</h3>
+                <h3 className="font-bold text-lg inline-flex items-center gap-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> Liên hệ hỗ trợ</h3>
                 <p className="text-sm text-gray-500 mt-0.5">Mã đơn: #{supportOrder._id.slice(-8)}</p>
               </div>
               <button
                 onClick={() => setSupportOrder(null)}
-                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 text-xl"
+                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 text-xl cursor-pointer"
               >×</button>
             </div>
 
             <div className="bg-blue-50 rounded-xl p-3 mb-4 text-sm text-blue-700">
-              💡 Mô tả vấn đề của bạn, chúng tôi sẽ phản hồi qua email trong vòng 24 giờ.
+              <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg> Mô tả vấn đề của bạn, chúng tôi sẽ phản hồi qua email trong vòng 24 giờ.
             </div>
 
             <textarea
@@ -286,14 +302,14 @@ const Orders = () => {
             <div className="flex gap-3 mt-4 justify-end">
               <button
                 onClick={() => setSupportOrder(null)}
-                className="px-4 py-2 text-sm border-2 border-gray-200 rounded-xl hover:bg-gray-50 font-medium"
+                className="px-4 py-2 text-sm border-2 border-gray-200 rounded-xl hover:bg-gray-50 font-medium cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 onClick={handleSendSupport}
                 disabled={sendingSupport}
-                className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 font-semibold disabled:opacity-50 transition"
+                className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition"
               >
                 {sendingSupport ? (
                   <span className="flex items-center gap-2">

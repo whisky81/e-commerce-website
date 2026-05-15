@@ -16,7 +16,7 @@ const NewsLetterBox = () => {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      const res = await axios.post(`${backendUrl}/api/v2/subscribers`, {
+      const res = await axios.post(`${backendUrl}/api/subscribers`, {
         email: email.trim(),
         name:  name.trim(),
       });
@@ -39,7 +39,7 @@ const NewsLetterBox = () => {
     return (
       <div className="text-center py-10 px-4">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-          <span className="text-3xl">🎉</span>
+          <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         </div>
         <p className="text-xl font-semibold text-gray-800 mb-2">Đăng ký thành công!</p>
         <p className="text-gray-500 text-sm">

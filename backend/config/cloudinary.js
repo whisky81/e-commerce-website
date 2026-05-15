@@ -1,4 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
+import logger from "./Logger.js";
+
 
 const connectCloudinary = async () => {
     try {
@@ -8,7 +10,22 @@ const connectCloudinary = async () => {
             api_secret: process.env.CLOUDINARY_API_SECRET
         });
     } catch (error) {
-        console.error(error)
+        logger.error('ThirdPartyServiceError', {
+            message: error.message,
+            stack: error.stack,
+            serviceName: 'cloudinary'
+        });
+    }
+}
+
+export const delImage = async (productId) => {
+    try {
+        const result = await cloudinary.uploader.destroy(
+            productId
+        );
+        return result.result === "ok";
+    } catch (error) {
+        return false;
     }
 }
 

@@ -1,8 +1,8 @@
 // admin/src/pages/Marketing.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import { toast } from "react-toastify";
-import { backendUrl } from "../App";
+import { fetchProducts } from "../api/products";
+import { sendPromo as sendPromoApi, applyBulkDiscount, removeBulkDiscount } from "../api/marketing";
 
 const fmt = (n) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
@@ -18,15 +18,13 @@ const Marketing = () => {
   const [saleStartAt, setSaleStartAt] = useState("");
   const [saleEndAt,   setSaleEndAt]   = useState("");
 
-  // ✅ Email form – dùng useCallback để tránh re-render mất focus
+  // Email form
   const [emailSubject, setEmailSubject] = useState("🔥 Ưu đãi đặc biệt từ ABC Shop!");
   const [promoCode,    setPromoCode]    = useState("");
   const [sending,      setSending]      = useState(false);
 
   useEffect(() => {
-    axios
-      .get(backendUrl + "/api/v2/products/admin", { withCredentials: true })
-      .then(r => { if (r.data.success) setProducts(r.data.data); });
+    fetchProducts({ limit: 100 }).then(r => { if (r.data.success) setProducts(r.data.data); });
   }, []);
 
   const toggleSelect = (id) =>
@@ -40,19 +38,15 @@ const Marketing = () => {
   const applyDiscount = async () => {
     setLoading(true);
     try {
-      const res = await axios.post(
-        backendUrl + "/api/v2/marketing/bulk-discount",
-        {
-          productIds: selected.length ? selected : undefined,
-          discount,
-          saleStartAt: saleStartAt || undefined,
-          saleEndAt:   saleEndAt   || undefined,
-        },
-        { withCredentials: true }
-      );
+      const res = await applyBulkDiscount({
+        productIds: selected.length ? selected : undefined,
+        discount,
+        saleStartAt: saleStartAt || undefined,
+        saleEndAt:   saleEndAt   || undefined,
+      });
       if (res.data.success) {
         toast.success(res.data.message);
-        // ✅ Cập nhật UI ngay lập tức
+        // Cập nhật UI ngay lập tức
         setProducts(prev =>
           prev.map(p => {
             if (selected.length === 0 || selected.includes(p._id)) {
@@ -73,14 +67,10 @@ const Marketing = () => {
   const removeDiscount = async () => {
     setLoading(true);
     try {
-      const res = await axios.post(
-        backendUrl + "/api/v2/marketing/remove-discount",
-        { productIds: selected.length ? selected : undefined },
-        { withCredentials: true }
-      );
+      const res = await removeBulkDiscount(selected);
       if (res.data.success) {
         toast.success(res.data.message);
-        // ✅ Xóa badge discount khỏi UI ngay lập tức
+        // Xóa badge discount khỏi UI ngay lập tức
         setProducts(prev =>
           prev.map(p => {
             if (selected.length === 0 || selected.includes(p._id)) {
@@ -101,15 +91,11 @@ const Marketing = () => {
   const sendPromo = async () => {
     setSending(true);
     try {
-      const res = await axios.post(
-        backendUrl + "/api/v2/marketing/send-promo",
-        {
-          subject:    emailSubject,
-          promoCode:  promoCode || undefined,
-          productIds: selected.length ? selected : undefined,
-        },
-        { withCredentials: true }
-      );
+      const res = await sendPromoApi({
+        subject:    emailSubject,
+        promoCode:  promoCode || undefined,
+        productIds: selected.length ? selected : undefined,
+      });
       if (res.data.success) {
         toast.success(res.data.message);
       } else throw new Error(res.data.message);
@@ -130,160 +116,158 @@ const Marketing = () => {
   );
 
   const LBL = ({ children }) => (
-    <p className="text-xs font-semibold mb-1.5" style={{ color: "#4F46E5" }}>{children}</p>
+    <label className="text-xs font-semibold mb-1 block" style={{ color: "#4F46E5" }}>
+      {children}
+    </label>
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: "#1E1B4B" }}>
-          Tiếp thị & Khuyến mãi
+    <div className="max-w-6xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-1" style={{ color: "#1E1B4B" }}>
+          Tiếp thị
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: "#9CA3AF" }}>
-          Quản lý discount và gửi email marketing đến subscriber
+        <p className="text-sm" style={{ color: "#9CA3AF" }}>
+          Quản lý khuyến mãi và gửi email marketing
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
+      {/* Tab switcher */}
+      <div className="flex gap-2 mb-6">
         {[
-          ["discount", "🔥 Quản lý Discount"],
-          ["email",    "✉️ Email Marketing"],
-        ].map(([k, l]) => (
+          { key: "discount", label: "🏷️ Giảm giá hàng loạt" },
+          { key: "email",    label: "✉️ Gửi email" },
+        ].map(t => (
           <button
-            key={k}
-            onClick={() => setTab(k)}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={{
-              background: tab === k ? "#4F46E5" : "#EEF2FF",
-              color:      tab === k ? "#fff"    : "#4F46E5",
-            }}
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              tab === t.key
+                ? "text-white shadow-lg"
+                : "text-gray-600 bg-white border border-gray-200 hover:border-indigo-300"
+            }`}
+            style={tab === t.key ? { background: "linear-gradient(135deg,#4F46E5,#7C3AED)" } : {}}
           >
-            {l}
+            {t.label}
           </button>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Product selector */}
-        <div className="lg:col-span-2">
+      <div className="grid lg:grid-cols-[1fr_300px] gap-6">
+        {/* Product list panel */}
+        <div className={tab === "discount" ? "" : "hidden lg:block"}>
           <CARD>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-bold" style={{ color: "#1E1B4B" }}>
-                Chọn sản phẩm{" "}
-                {selected.length > 0 && (
-                  <span
-                    className="ml-1 px-2 py-0.5 rounded-full text-xs"
-                    style={{ background: "#EEF2FF", color: "#4F46E5" }}
-                  >
-                    {selected.length}
-                  </span>
-                )}
+                📦 Chọn sản phẩm ({selected.length}/{products.length})
               </p>
               <button
                 onClick={toggleAll}
-                className="text-xs font-semibold"
-                style={{ color: "#4F46E5" }}
+                className="text-xs font-medium px-3 py-1 rounded-lg"
+                style={{ background: "#EEF2FF", color: "#4F46E5" }}
               >
                 {selected.length === products.length ? "Bỏ chọn tất cả" : "Chọn tất cả"}
               </button>
             </div>
-
-            <div className="max-h-96 overflow-y-auto space-y-2 pr-1">
+            <div className="space-y-2 max-h-96 overflow-y-auto">
               {products.map(p => (
                 <div
                   key={p._id}
                   onClick={() => toggleSelect(p._id)}
-                  className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
-                  style={{
-                    border:     `1.5px solid ${selected.includes(p._id) ? "#4F46E5" : "#EDE9FE"}`,
-                    background: selected.includes(p._id) ? "#EEF2FF" : "#FAFAFF",
-                  }}
+                  className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all ${
+                    selected.includes(p._id)
+                      ? "ring-2 ring-indigo-400"
+                      : "hover:bg-gray-50"
+                  }`}
+                  style={
+                    selected.includes(p._id)
+                      ? { background: "#EEF2FF" }
+                      : { background: "#FAFAFF" }
+                  }
                 >
-                  {/* Checkbox */}
-                  <div
-                    className={`w-4 h-4 rounded flex-shrink-0 flex items-center justify-center ${
-                      selected.includes(p._id) ? "bg-indigo-600" : "border-2 border-slate-300"
-                    }`}
-                  >
-                    {selected.includes(p._id) && (
-                      <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
-                      </svg>
-                    )}
-                  </div>
-
                   <img
-                    src={p.images?.[0]} alt=""
+                    src={p.images?.[0]?.url}
+                    alt=""
                     className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: "#1E1B4B" }}>{p.name}</p>
-                    <p className="text-xs" style={{ color: "#9CA3AF" }}>{fmt(p.price)}</p>
+                    <p className="text-sm font-medium truncate" style={{ color: "#1E1B4B" }}>
+                      {p.name}
+                    </p>
+                    <p className="text-xs" style={{ color: "#9CA3AF" }}>
+                      {fmt(p.price)}
+                      {p.discount > 0 && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-bold"
+                          style={{ background: "#FEE2E2", color: "#EF4444" }}>
+                          -{p.discount}%
+                        </span>
+                      )}
+                    </p>
                   </div>
-                  {/* ✅ Badge chỉ hiện khi discount > 0 */}
-                  {p.discount > 0 && (
-                    <span
-                      className="text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
-                      style={{ background: "#FEE2E2", color: "#EF4444" }}
-                    >
-                      -{p.discount}%
-                    </span>
-                  )}
+                  <div
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                      selected.includes(p._id)
+                        ? "bg-indigo-600 border-indigo-600"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    {selected.includes(p._id) && (
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-
-            {selected.length === 0 && (
-              <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
-                * Nếu không chọn sản phẩm nào, thao tác sẽ áp dụng cho <strong>TẤT CẢ</strong> sản phẩm
-              </p>
-            )}
           </CARD>
         </div>
 
-        {/* Action panel */}
-        <div className="space-y-5">
-          {/* ✅ Dùng display:none thay vì conditional render để tránh unmount/remount */}
+        {/* Controls panel */}
+        <div className="space-y-4">
+          {/* Discount controls */}
           <div style={{ display: tab === "discount" ? "block" : "none" }}>
-            <CARD style={{ background: "#FFFBEB", border: "1.5px solid #FDE68A" }}>
-              <p className="text-sm font-bold mb-4" style={{ color: "#92400E" }}>
-                🔥 Áp dụng Discount
+            <CARD>
+              <p className="text-sm font-bold mb-4" style={{ color: "#1E1B4B" }}>
+                🏷️ Áp dụng giảm giá
               </p>
               <div className="space-y-3">
                 <div>
-                  <LBL>Giảm giá (%)</LBL>
+                  <LBL>Phần trăm giảm</LBL>
                   <div className="flex items-center gap-2">
                     <input
-                      type="range" min={0} max={90} step={5}
+                      type="number"
+                      min={0}
+                      max={100}
                       value={discount}
                       onChange={e => setDiscount(Number(e.target.value))}
-                      className="flex-1 accent-amber-500"
+                      className="w-16 px-2 py-1.5 text-center text-sm rounded-lg font-bold"
+                      style={{ border: "1.5px solid #FDE68A", background: "#fff", color: "#92400E" }}
                     />
-                    <span className="text-lg font-bold w-12 text-center" style={{ color: "#92400E" }}>
-                      {discount}%
-                    </span>
+                    <span className="text-sm font-bold" style={{ color: "#92400E" }}>%</span>
                   </div>
                 </div>
-                <div>
-                  <LBL>Bắt đầu (tuỳ chọn)</LBL>
-                  <input
-                    type="datetime-local"
-                    value={saleStartAt}
-                    onChange={e => setSaleStartAt(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl"
-                    style={{ border: "1.5px solid #FDE68A", background: "#fff" }}
-                  />
-                </div>
-                <div>
-                  <LBL>Kết thúc (tuỳ chọn)</LBL>
-                  <input
-                    type="datetime-local"
-                    value={saleEndAt}
-                    onChange={e => setSaleEndAt(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl"
-                    style={{ border: "1.5px solid #FDE68A", background: "#fff" }}
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <LBL>Bắt đầu</LBL>
+                    <input
+                      type="datetime-local"
+                      value={saleStartAt}
+                      onChange={e => setSaleStartAt(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg"
+                      style={{ border: "1.5px solid #DDD6FE", background: "#fff" }}
+                    />
+                  </div>
+                  <div>
+                    <LBL>Kết thúc</LBL>
+                    <input
+                      type="datetime-local"
+                      value={saleEndAt}
+                      onChange={e => setSaleEndAt(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg"
+                      style={{ border: "1.5px solid #DDD6FE", background: "#fff" }}
+                    />
+                  </div>
                 </div>
                 <button
                   onClick={applyDiscount}
@@ -305,7 +289,7 @@ const Marketing = () => {
             </CARD>
           </div>
 
-          {/* ✅ Email panel – dùng display:none để giữ input focus */}
+          {/* Email panel */}
           <div style={{ display: tab === "email" ? "block" : "none" }}>
             <CARD>
               <p className="text-sm font-bold mb-4" style={{ color: "#1E1B4B" }}>
@@ -314,7 +298,6 @@ const Marketing = () => {
               <div className="space-y-3">
                 <div>
                   <LBL>Tiêu đề email</LBL>
-                  {/* ✅ Input được mount một lần duy nhất, không bị unmount khi switch tab */}
                   <input
                     type="text"
                     id="marketing-email-subject"

@@ -1,10 +1,9 @@
 // admin/src/pages/Add.jsx
 import React, { useState, useRef } from 'react'
 import { assets } from '../assets/assets'
-import axios from 'axios'
-import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
 import * as XLSX from 'xlsx'          // npm install xlsx
+import { createProduct, bulkImportProducts } from '../api/products'
 
 const FIELD_CLASS = 'w-full px-4 py-2.5 text-sm rounded-xl outline-none'
 const FIELD_STYLE = { border: '1.5px solid #DDD6FE', background: '#FAFAFF', color: '#1E1B4B', borderRadius: '10px' }
@@ -45,7 +44,7 @@ const Add = () => {
       formData.append('specifications', JSON.stringify(specifications))
       images.forEach((img, i) => img && formData.append(`img${i + 1}`, img))
 
-      const response = await axios.post(backendUrl + '/api/v2/products', formData, { withCredentials: true })
+      const response = await createProduct(formData)
       if (response.data.success) {
         toast.success(response.data.message)
         setName(''); setDescription(''); setCategory('Default'); setPrice('')
@@ -73,19 +72,30 @@ const Add = () => {
       if (!rows.length) { toast.warning('File Excel trống hoặc sai định dạng'); return }
 
       // Map cột Excel → API fields
-      const products = rows.map(r => ({
-        name:        String(r['Tên sản phẩm'] || r.name        || '').trim(),
-        description: String(r['Mô tả']         || r.description || '').trim(),
-        price:       Number(r['Giá']            || r.price       || 0),
-        category:    String(r['Danh mục']       || r.category    || 'Default').trim(),
-        brand:       String(r['Thương hiệu']    || r.brand       || '').trim(),
-        stock:       Number(r['Tồn kho']        || r.stock       || 10000),
-        discount:    Number(r['Giảm giá (%)']   || r.discount    || 0),
-        note:        String(r['Ghi chú']        || r.note        || '').trim(),
-      }))
+      const products = rows.map(r => {
+        // Parse "Thông số kỹ thuật" dạng "RAM: 8GB; ROM: 256GB"
+        const rawSpecs = String(r['Thông số kỹ thuật'] || r.specifications || '');
+        const specifications = rawSpecs ? rawSpecs.split(';').map(s => {
+          const [key, value] = s.split(':');
+          return { key: key?.trim() || '', value: value?.trim() || '' };
+        }).filter(s => s.key) : [];
+
+        return {
+          name:           String(r['Tên sản phẩm'] || r.name        || '').trim(),
+          description:    String(r['Mô tả']         || r.description || '').trim(),
+          price:          Number(r['Giá']            || r.price       || 0),
+          category:       String(r['Danh mục']       || r.category    || 'Default').trim(),
+          brand:          String(r['Thương hiệu']    || r.brand       || '').trim(),
+          stock:          Number(r['Tồn kho']        || r.stock       || 10000),
+          discount:       Number(r['Giảm giá (%)']   || r.discount    || 0),
+          note:           String(r['Ghi chú']        || r.note        || '').trim(),
+          images:         r['Ảnh (URL)'] ? [String(r['Ảnh (URL)']).trim()] : undefined,
+          specifications: specifications
+        };
+      })
 
       setLoading(true)
-      const res = await axios.post(backendUrl + '/api/v2/products/bulk-import', { products }, { withCredentials: true })
+      const res = await bulkImportProducts(products)
       if (res.data.success) {
         toast.success(res.data.message)
         if (res.data.data.errors?.length) {
@@ -103,8 +113,9 @@ const Add = () => {
   // ── Download sample Excel ─────────────────────────────────────────────────
   const downloadSample = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ['Tên sản phẩm','Mô tả','Giá','Danh mục','Thương hiệu','Tồn kho','Giảm giá (%)','Ghi chú'],
-      ['Sản phẩm mẫu','Mô tả chi tiết',500000,'Điện thoại','Samsung',100,10,'Hàng chính hãng'],
+      ['Tên sản phẩm', 'Mô tả', 'Giá', 'Danh mục', 'Thương hiệu', 'Tồn kho', 'Giảm giá (%)', 'Ghi chú', 'Ảnh (URL)', 'Thông số kỹ thuật'],
+      ['Sản phẩm mẫu 1', 'Mô tả chi tiết', 500000, 'Điện thoại', 'Samsung', 100, 10, 'Hàng chính hãng', 'https://example.com/img1.jpg', 'RAM: 8GB; Bộ nhớ: 256GB'],
+      ['Sản phẩm mẫu 2 (Không có ảnh)', 'Mô tả', 300000, 'Phụ kiện', 'Sony', 50, 0, '', '', 'Màu: Đen; Cổng: USB-C'],
     ])
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Sản phẩm')
