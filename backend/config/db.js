@@ -1,20 +1,11 @@
 import mongoose from "mongoose";
-import Product from "../models/v2/Product.js";
-
 const connectDB = async () => {
-    try {
-        mongoose.connection.on('connected', () => {
-            console.log("DB connected")
-        })
-
-        await mongoose.connect(`${process.env.MONGODB_URI}`)
-        await Product.updateMany(
-            { stock: { $exists: false } },
-            { $set: { stock: 10000, soldCount: 0 } }
-        )
-    } catch (error) {
-        console.error(error)
-    }
+    const dbName = process.env.DB_NAME;
+    const mongodbUri = dbName === "v3" ? process.env.V3_MONGODB_URI : process.env.MONGODB_URI;
+    mongoose.connection.on('connected', () => {
+        console.log(`DB connected\nDB NAME: ${dbName || "v2"}`);
+    });
+    await mongoose.connect(mongodbUri);
 }
 
 export default connectDB

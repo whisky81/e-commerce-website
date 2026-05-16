@@ -1,29 +1,21 @@
-// frontend/src/pages/Collection.jsx
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import useShopContext from '../hooks/useShopContext'
-import { assets } from '../assets/assets'
 import Title from '../components/Title'
 import ProductItem from '../components/ProductItem'
-import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
+import { useProducts } from '../hooks/useProducts'
 
 const PAGE_SIZE = 12
 
 const Collection = () => {
-  const { search, showSearch, backendUrl } = useShopContext()
+  const { search, showSearch } = useShopContext()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [showFilter, setShowFilter]   = useState(false)
   const [category,   setCategory]     = useState([])
   const [brands,     setBrands]       = useState([])
-  const [sortType,   setSortType]     = useState('relavent')
+  const [sortType,   setSortType]     = useState('newest')
   const [debouncedSearch, setDebouncedSearch] = useState(search)
-
-  const [items,         setItems]         = useState([])
-  const [filterOptions, setFilterOptions] = useState({ categories: [], brands: [] })
-  const [loading,       setLoading]       = useState(true)
-  const [totalPages,    setTotalPages]    = useState(1)
-  const [total,         setTotal]         = useState(0)
 
   // ─── Pagination: read from URL ──────────────────────────────────────────────
   const page = Math.max(1, Number(searchParams.get('page')) || 1)
@@ -56,37 +48,21 @@ const Collection = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterKey])
 
-  // ─── Fetch products ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const controller = new AbortController()
-    const load = async () => {
-      setLoading(true)
-      try {
-        const sortParam = sortType === 'low-high' ? 'price' : sortType === 'high-low' ? '-price' : undefined
-        const params = { page, limit: PAGE_SIZE }
-        if (category.length) params.categories = category.join(',')
-        if (brands.length)   params.brands     = brands.join(',')
-        if (sortParam)       params.sort       = sortParam
-        if (showSearch && debouncedSearch.trim()) params.search = debouncedSearch.trim()
+  // ─── Fetch products via React Query ─────────────────────────────────────────
+  const sortParam = sortType === 'low-high' ? 'price' : sortType === 'high-low' ? '-price' : undefined;
+  
+  const queryParams = { page, limit: PAGE_SIZE };
+  if (category.length) queryParams.categories = category.join(',');
+  if (brands.length)   queryParams.brands     = brands.join(',');
+  if (sortParam)       queryParams.sort       = sortParam;
+  if (showSearch && debouncedSearch.trim()) queryParams.search = debouncedSearch.trim();
 
-        const { data: res } = await axios.get(`${backendUrl}/api/v2/products`, {
-          params, signal: controller.signal, withCredentials: true,
-        })
-        if (res.success) {
-          setItems(res.data || [])
-          setTotalPages(res.totalPages || 1)
-          setTotal(res.total ?? 0)
-          if (res.filters) setFilterOptions(res.filters)
-        }
-      } catch (e) {
-        if (e.name !== 'CanceledError' && e.code !== 'ERR_CANCELED') console.error(e)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-    return () => controller.abort()
-  }, [backendUrl, page, category, brands, sortType, debouncedSearch, showSearch])
+  const { data: productsData, isLoading: loading } = useProducts(queryParams);
+
+  const items = productsData?.items || [];
+  const filterOptions = productsData?.filters || { categories: [], brands: [] };
+  const totalPages = productsData?.totalPages || 1;
+  const total = productsData?.total || 0;
 
   const toggleCategory = (v) => setCategory(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
   const toggleBrands   = (v) => setBrands  (prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
@@ -110,9 +86,9 @@ const Collection = () => {
       {/* ── Sidebar filter ── */}
       <div className='w-full sm:w-56 flex-shrink-0'>
         <button onClick={() => setShowFilter(!showFilter)}
-          className='sm:hidden w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold mb-4'
+          className='sm:hidden w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold mb-4 cursor-pointer'
           style={{ background: '#fff', border: '1.5px solid #EDE9FE', color: '#1E1B4B' }}>
-          <span>🔍 Bộ lọc {(category.length + brands.length) > 0 && `(${category.length + brands.length})`}</span>
+          <span><svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> Bộ lọc {(category.length + brands.length) > 0 && `(${category.length + brands.length})`}</span>
           <span>{showFilter ? '▲' : '▼'}</span>
         </button>
 
@@ -175,7 +151,7 @@ const Collection = () => {
           <select value={sortType} onChange={e => setSortType(e.target.value)}
             className='text-sm px-3 py-2 rounded-xl font-medium cursor-pointer'
             style={{ border: '1.5px solid #EDE9FE', color: '#1E1B4B', background: '#fff' }}>
-            <option value="relavent">Mới nhất</option>
+            <option value="newest">Mới nhất</option>
             <option value="low-high">Giá: thấp → cao</option>
             <option value="high-low">Giá: cao → thấp</option>
           </select>
@@ -204,6 +180,7 @@ const Collection = () => {
                 salePrice={item.salePrice}
                 discount={item.discount}
                 soldCount={item.soldCount}
+                saleEndAt={item.saleEndAt}
               />
             ))}
           </div>

@@ -11,7 +11,6 @@ const sendToken = (res, userId, role, statusCode, message) => {
             expiresIn: process.env.JWT_EXPIRES_IN
         }
     );
-
     res
         .status(statusCode)
         .cookie("token", token, {
@@ -22,7 +21,12 @@ const sendToken = (res, userId, role, statusCode, message) => {
         })
         .json({
             success: true,
-            message
+            message,
+            data: {
+                id: userId,
+                role: role,
+                redirectUrl: role === "admin" ? process.env.ADMIN_URL : process.env.FRONTEND_URL
+            }
         })
 }
 

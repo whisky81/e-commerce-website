@@ -19,8 +19,19 @@ import VerifyEmail from './pages/VerifyEmail.jsx'
 import PlaceOrderByProductId from './pages/PlaceOrderByProductId.jsx'
 import User from './pages/User.jsx'
 import Favorites from './pages/Favorites.jsx'
+import useShopContext from './hooks/useShopContext.js'
 
 const App = () => {
+  const { authChecked } = useShopContext();
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className='min-h-screen bg-gradient-to-b from-white via-blue-50/20 to-white'>
       <ToastContainer

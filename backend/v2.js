@@ -6,24 +6,32 @@ import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import connectCloudinary from "./config/cloudinary.js";
 import passport from "./config/passport.js";
+import logger from "./config/Logger.js";
+import shippingProvider from "./config/shipping.js";
 
 // Routes
-import authRoutes       from "./routes/v2/authRoutes.js";
-import userRoutes       from "./routes/v2/userRoutes.js";
-import productRoutes    from "./routes/v2/productRoutes.js";
-import cartRoutes       from "./routes/v2/cartRoutes.js";
-import reviewRoutes     from "./routes/v2/reviewRoutes.js";
-import orderRoutes      from "./routes/v2/orderRoutes.js";
-import adminRoutes      from "./routes/v2/adminRoutes.js";
-import settingRoutes    from "./routes/v2/settingRoutes.js";
-import marketingRoutes  from "./routes/v2/marketingRoutes.js";
-import subscriberRoutes from "./routes/v2/subscriberRoutes.js";
+import authRoutes       from "./routes/authRoutes.js";
+import userRoutes       from "./routes/userRoutes.js";
+import productRoutes    from "./routes/productRoutes.js";
+import cartRoutes       from "./routes/cartRoutes.js";
+import reviewRoutes     from "./routes/reviewRoutes.js";
+import orderRoutes      from "./routes/orderRoutes.js";
+import adminRoutes      from "./routes/adminRoutes.js";
+import settingRoutes    from "./routes/settingRoutes.js";
+import marketingRoutes  from "./routes/marketingRoutes.js";
+import subscriberRoutes from "./routes/subscriberRoutes.js";
+import errorHandler from "./middleware/errorHandler.js";
+import requestLogger from "./middleware/requestLogger.js";
+import addrRoutes from "./routes/v3/addressRoutes.js";
+import orderRoutesV3 from "./routes/v3/orderRoutes.js";
+import adminRoutesV3 from "./routes/v3/adminRoutes.js";
 
 const app  = express();
 const port = process.env.PORT || 5000;
 
 connectDB();
 connectCloudinary();
+console.log(shippingProvider);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -41,17 +49,46 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use("/api/v2/auth",        authRoutes);
-app.use("/api/v2/users",       userRoutes);
-app.use("/api/v2/products",    productRoutes);
-app.use("/api/v2/cart",        cartRoutes);
-app.use("/api/v2/reviews",     reviewRoutes);
-app.use("/api/v2/orders",      orderRoutes);
-app.use("/api/v2/admin",       adminRoutes);
-app.use("/api/v2/setting",     settingRoutes);
-app.use("/api/v2/marketing",   marketingRoutes);
-app.use("/api/v2/subscribers", subscriberRoutes);
+app.use(requestLogger);
+app.use("/api/auth",        authRoutes);
+app.use("/api/users",       userRoutes);
+app.use("/api/products",    productRoutes);
+app.use("/api/cart",        cartRoutes);
+app.use("/api/reviews",     reviewRoutes);
+app.use("/api/orders",      orderRoutes);
+app.use("/api/admin",       adminRoutes);
+app.use("/api/setting",     settingRoutes);
+app.use("/api/marketing",   marketingRoutes);
+app.use("/api/subscribers", subscriberRoutes);
 
-app.get("/", (req, res) => res.json({ message: "ABC Shop API v2 is running" }));
+// api version 3 
+app.use("/api/v3/addresses/3-level", addrRoutes);
+app.use("/api/v3/admin", adminRoutesV3);
+app.use("/api/v3", orderRoutesV3);
 
-app.listen(port, () => console.log(`🚀 Server running: http://localhost:${port}`));
+
+app.get("/", (req, res) => {
+  const { origin = "https://test.org" } = req.headers;
+  res.json({ message: "ABC Shop API v2 is running", origin })
+});
+
+app.use(errorHandler);
+
+const server = app.listen(port, () => console.log(`🚀 Server running: http://localhost:${port}`));
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection', {
+    reason
+  })
+  // Graceful shutdown
+  server.close(() => process.exit(1));
+});
+
+process.on('uncaughtException', (err) => {
+  // console.log(err);
+  logger.error('Uncaught Exception', {
+    message: err.message,
+    stack: err.stack 
+  });
+  process.exit(1);
+});

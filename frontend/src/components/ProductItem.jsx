@@ -45,7 +45,7 @@ const ProductItem = ({ id, images, name, price, salePrice, discount, soldCount, 
         <div className="overflow-hidden" style={{ background: "#F5F4FF", aspectRatio: "3/4" }}>
           <img
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            src={images[0]} alt={name} loading="lazy" />
+            src={images?.[0]?.url || images?.[0]} alt={name} loading="lazy" />
         </div>
 
         {/* Info */}

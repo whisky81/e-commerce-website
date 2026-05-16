@@ -1,84 +1,40 @@
 // frontend/src/pages/Login.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect } from "react";
 import useShopContext from "../hooks/useShopContext";
-import axios from "axios";
-import { toast } from "react-toastify";
+import { useAuth } from "../hooks/useAuth";
 
 const Login = () => {
   const [currentState, setCurrentState] = useState("Đăng nhập");
-  const { navigate, backendUrl, isAuthenticated, setIsAuthenticated } = useShopContext();
+  const { navigate, backendUrl } = useShopContext();
+  const { login, register, isLoggingIn, isRegistering, isAuthenticated } = useAuth();
+  
   const [name,     setName]     = useState("");
   const [password, setPassword] = useState("");
   const [email,    setEmail]    = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const authChecked = useRef(false);
-
-  // ✅ Xử lý redirect sau OAuth (?auth=success)
-  useEffect(() => {
-    if (authChecked.current) return;
-    authChecked.current = true;
-    const params = new URLSearchParams(window.location.search);
-    const authResult = params.get("auth");
-    const authError  = params.get("error");
-
-    if (authResult === "success") {
-      setIsAuthenticated(true);
-      localStorage.setItem("isAuth", "true");
-      window.history.replaceState({}, "", "/");
-      toast.success("Đăng nhập thành công!");
-      navigate("/");
-    } else if (authError) {
-      const messages = {
-        google:   "Đăng nhập Google thất bại. Vui lòng thử lại.",
-        facebook: "Đăng nhập Facebook thất bại. Vui lòng thử lại.",
-      };
-      toast.error(messages[authError] || "Đăng nhập OAuth thất bại.");
-      window.history.replaceState({}, "", "/login");
-    }
-  }, []);
+  
+  // OAuth redirect is handled in App.jsx now
 
   useEffect(() => {
     if (isAuthenticated) navigate("/");
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
-  const onSubmitHandler = async (e) => {
+  const onSubmitHandler = (e) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      let response;
-      if (currentState === "Đăng ký") {
-        response = await axios.post(
-          backendUrl + "/api/v2/auth/register",
-          { name, email, password },
-          { withCredentials: true }
-        );
-      } else {
-        response = await axios.post(
-          backendUrl + "/api/v2/auth/login",
-          { email, password },
-          { withCredentials: true }
-        );
-      }
-      if (response.data.success) {
-        toast.success(response.data.message);
-        setIsAuthenticated(true);
-        localStorage.setItem("isAuth", "true");
-      } else {
-        throw new Error(response.data.message);
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || error.message);
-    } finally {
-      setLoading(false);
+    if (currentState === "Đăng ký") {
+      register({ name, email, password });
+    } else {
+      login({ email, password });
     }
   };
 
+  const loading = isLoggingIn || isRegistering;
+
   const handleGoogleLogin = () => {
-    window.location.href = `${backendUrl}/api/v2/auth/google`;
+    window.location.href = `${backendUrl}/api/auth/google`;
   };
 
   const handleFacebookLogin = () => {
-    window.location.href = `${backendUrl}/api/v2/auth/facebook`;
+    window.location.href = `${backendUrl}/api/auth/facebook`;
   };
 
   return (

@@ -12,6 +12,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
     const [showReviewForm, setShowReviewForm] = useState(false);
     const reviewsPerPage = 5;
 
+    const [submitting, setSubmitting] = useState(false);
     const [newReview, setNewReview] = useState({
         rating: 0,
         comment: '',
@@ -91,7 +92,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
             if (newReview.media[1]) formData.append("media2", newReview.media[1]);
 
             let response = await axios.post(
-                backendUrl + "/api/v2/reviews",
+                backendUrl + "/api/reviews",
                 formData,
                 { withCredentials: true }
             );
@@ -99,11 +100,11 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                 throw new Error(response.data.message);
             }
             response = await axios.get(
-                backendUrl + `/api/v2/products/${productId}/reviews`,
+                backendUrl + `/api/products/${productId}`,
                 { withCredentials: true }
             );
             if (response.data.success) {
-                setReviews(response.data.data);
+                setReviews(response.data.data.reviews || response.data.data);
             }
             setNewReview({ rating: 0, comment: '', media: [] });
             setShowReviewForm(false);
@@ -325,7 +326,7 @@ const ProductReviews = ({ reviews, setReviews, productId }) => {
                         <div key={review._id} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
                             <div className="flex items-start gap-3 mb-3 flex-wrap">
                                 <img
-                                    src={review.user?.avatar || assets.default_avatar}
+                                    src={review.user?.avatar?.url || assets.default_avatar}
                                     alt="avatar"
                                     className="w-10 h-10 rounded-full object-cover shrink-0"
                                 />

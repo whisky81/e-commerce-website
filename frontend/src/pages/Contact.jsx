@@ -29,7 +29,7 @@ const Contact = () => {
             Gia nhập đội ngũ của chúng tôi để cùng phát triển và mang công nghệ đến gần hơn với mọi người.
           </p>
           
-          <button className='border border-black px-8 py-4 text-sm hover:bg-black hover:text-white transition-all duration-500'>
+          <button className='border border-black px-8 py-4 text-sm hover:bg-black hover:text-white transition-all duration-500 cursor-pointer'>
             Khám Phá Cơ Hội Nghề Nghiệp
           </button>
         </div>

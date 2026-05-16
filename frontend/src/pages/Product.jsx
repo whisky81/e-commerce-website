@@ -6,46 +6,54 @@ import { assets } from "../assets/assets";
 import RelatedProducts from "../components/RelatedProducts";
 import SaleCountdown from "../components/SaleCountdown";
 import { toast } from "react-toastify";
-import axios from "axios";
+import { fetchProduct } from "../api/products";
 import Review from "./Review";
 
 const fmt = (n) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
 
 const Product = () => {
   const { productId } = useParams();
-  const { backendUrl, addToCart, toggleFavorite, favoriteIds } = useShopContext();
+  const { addToCart, toggleFavorite, favoriteIds } = useShopContext();
   const isFavorite = favoriteIds.some(fid => String(fid) === String(productId));
 
   const [productData, setProductData] = useState(null);
   const [reviews,     setReviews]     = useState([]);
   const [image,       setImage]       = useState("");
   const [activeTab,   setActiveTab]   = useState("description");
+  const [loading,     setLoading]     = useState(true);
 
   const fetchProductData = async () => {
     try {
-      const response = await axios.get(
-        backendUrl + `/api/v2/products/${productId}`,
-        { withCredentials: true }
-      );
+      const response = await fetchProduct(productId);
       if (response.data.success) {
         setProductData(response.data.data.product);
         setReviews(response.data.data.reviews);
-        setImage(response.data.data.product.images[0]);
+        setImage(response.data.data.product.images[0]?.url);
       } else {
         throw new Error(response.data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => { fetchProductData(); }, [productId]);
+  useEffect(() => {
+    // Reset state when product changes to prevent stale data flash
+    setProductData(null);
+    setReviews([]);
+    setImage("");
+    setActiveTab("description");
+    setLoading(true);
+    fetchProductData();
+  }, [productId]);
 
   const averageRating = reviews.length > 0
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : 0;
 
-  if (!productData) {
+  if (loading || !productData) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
@@ -64,7 +72,7 @@ const Product = () => {
           <div className="flex sm:flex-col overflow-x-auto sm:overflow-y-scroll justify-between sm:justify-normal sm:w-[18.7%] w-full">
             {productData.images.map((item, index) => (
               <img
-                key={index} onClick={() => setImage(item)} src={item} alt={productData.name}
+                key={index} onClick={() => setImage(item?.url || item)} src={item?.url || item} alt={productData.name}
                 className={`w-[24%] sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer rounded transition-all ${
                   image === item ? "ring-2 ring-indigo-400" : "hover:ring-2 hover:ring-gray-300"
                 }`}
@@ -146,11 +154,12 @@ const Product = () => {
 
           {/* Add to cart */}
           <button
-            onClick={() => addToCart(productData._id, productData.name, productData.images[0], productData.price, productData.salePrice)}
-            className="mt-6 px-8 py-3 rounded-xl text-white font-bold transition-all hover:opacity-90 active:scale-95"
+            onClick={() => addToCart(productData._id, productData.name, productData.images[0]?.url, productData.price, productData.salePrice)}
+            disabled={(productData.stock ?? 0) <= 0}
+            className="mt-6 px-8 py-3 rounded-xl text-white font-bold transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             style={{ background: "linear-gradient(135deg,#4F46E5,#7C3AED)" }}
           >
-            Thêm vào giỏ hàng
+            {(productData.stock ?? 0) <= 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
           </button>
 
           <hr className="mt-8 sm:w-4/5" />

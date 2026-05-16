@@ -2,8 +2,10 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
+import { useAuth } from '../context/AuthContext'
 
-const Login = ({ setIsLogin }) => {
+const Login = () => {
+  const { login } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -13,14 +15,14 @@ const Login = ({ setIsLogin }) => {
     try {
       setLoading(true)
       const response = await axios.post(
-        backendUrl + "/api/v2/auth/login",
+        backendUrl + "/api/auth/login",
         { email, password },
         { withCredentials: true }
       )
 
       if (response.data.success) {
         toast.success(response.data.message)
-        setIsLogin(true)
+        login(response.data.data)
       } else {
         throw new Error(response.data.message || "Login failed")
       }

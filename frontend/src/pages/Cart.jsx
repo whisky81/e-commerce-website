@@ -7,22 +7,20 @@ import { Link } from "react-router-dom";
 
 const Cart = () => {
   const { cartItems, updateQuantity, navigate } = useShopContext();
-  const [cartData, setCartData]         = useState([]);
+  const cartData = React.useMemo(() => Object.values(cartItems), [cartItems]);
   const [selectedItems, setSelectedItems] = useState(new Set());
 
   useEffect(() => {
-    const tempData = Object.values(cartItems);
-    setCartData(tempData);
     // Auto-select tất cả khi cart thay đổi, nhưng giữ lại các item đang được chọn
     setSelectedItems(prev => {
-      if (prev.size === 0 && tempData.length > 0) {
-        return new Set(tempData.map(item => item.id));
+      if (prev.size === 0 && cartData.length > 0) {
+        return new Set(cartData.map(item => item.id));
       }
       // Loại bỏ những item đã bị xóa khỏi cart
-      const validIds = new Set(tempData.map(item => item.id));
+      const validIds = new Set(cartData.map(item => item.id));
       return new Set([...prev].filter(id => validIds.has(id)));
     });
-  }, [cartItems]);
+  }, [cartData]);
 
   const toggleSelectItem = (productId) => {
     setSelectedItems(prev => {
@@ -48,7 +46,7 @@ const Cart = () => {
     }
     // ✅ Chỉ truyền đúng các item được chọn, không truyền toàn bộ cart
     const selectedCartItems = cartData.filter(item => selectedItems.has(item.id));
-    navigate("/place-order", { state: { selectedCartItems } });
+    navigate("/place-order", { state: { selectedCartItems, fromCart: true } });
   };
 
   const selectedTotal = cartData
@@ -123,6 +121,9 @@ const Cart = () => {
                     </p>
                     <p className="text-lg font-bold text-blue-600">
                       {productData.price.toLocaleString("vi-VN")} ₫
+                      {productData.originalPrice && (
+                        <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 ml-1 rounded font-semibold">-{productData.discount}%</span>
+                      )}
                     </p>
                     <div className="flex items-center gap-3 mt-3">
                       <div className="flex items-center border border-slate-300 rounded-lg">
