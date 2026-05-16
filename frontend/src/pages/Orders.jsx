@@ -14,11 +14,11 @@ const orderDisplayTotal = (o) => {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   const sub = o.fee?.subtotal ?? o.itemsPrice ?? 0;
   const disc = o.fee?.discount ?? 0;
-  const ship = o.shipping?.fee ?? o.shippingPrice ?? 0;
+  const ship = o.shipping?.fee ?? o.fee?.shipping ?? o.shippingPrice ?? 0;
   return sub - disc + ship;
 };
 const orderSubtotal = (o) => o?.fee?.subtotal ?? o?.itemsPrice ?? 0;
-const orderShippingFee = (o) => o?.shipping?.fee ?? o?.shippingPrice ?? 0;
+const orderShippingFee = (o) => o?.shipping?.fee ?? o?.fee?.shipping ?? o?.shippingPrice ?? 0;
 const orderDiscountAmt = (o) => {
   if (!o) return 0;
   if (o.fee?.discount != null && o.fee.discount > 0) return o.fee.discount;

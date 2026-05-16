@@ -409,7 +409,7 @@ export const ordersList = async (req, res) => {
 const ordersData = async (skip, limit, filter) => {
   const [orders, total] = await Promise.all([
     Order.find(filter)
-      .select("-fee.shipping -fee.total -package")
+      .select("-package")
       .populate("user", "name email")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -450,7 +450,7 @@ const ordersData = async (skip, limit, filter) => {
     .map((o) => {
       const subtotal = o.fee?.subtotal ?? o.itemsPrice ?? 0;
       const discount = o.fee?.discount ?? 0;
-      const shipFee = o.shipping?.fee ?? o.shippingPrice ?? 0;
+      const shipFee = o.shipping?.fee ?? o.fee?.shipping ?? o.shippingPrice ?? 0;
       const computedTotal = subtotal - discount + shipFee;
       return {
         ...o,

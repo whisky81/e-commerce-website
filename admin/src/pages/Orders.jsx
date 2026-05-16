@@ -412,7 +412,11 @@ const Orders = () => {
                                         <div className="grid grid-cols-[100px_1fr] gap-2">
                                           <span className="text-slate-500">Mã vận đơn:</span>
                                           <span className="font-mono text-slate-800">
-                                            {order.shipping.code ?? '—'}
+                                            {order.shipping.code ? (
+                                              <a href="https://5sao.ghn.dev" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline" title="Tra cứu trên GHN">
+                                                {order.shipping.code}
+                                              </a>
+                                            ) : '—'}
                                           </span>
                                         </div>
                                         <div className="grid grid-cols-[100px_1fr] gap-2">

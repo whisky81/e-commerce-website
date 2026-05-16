@@ -36,7 +36,7 @@ export const products = async (req, res) => {
     }
 
     if (searchTerm) {
-        filter.$text = { $search: searchTerm };
+        filter.name = { $regex: searchTerm, $options: 'i' };
     }
 
     if (minPrice || maxPrice) {
