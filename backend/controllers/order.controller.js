@@ -442,12 +442,25 @@ const ordersData = async (skip, limit, filter) => {
     ])
   );
 
-  // attach shipping to each order
-  const data = orders.map(order => ({
-    ...order,
-    shipping: shippingMap.get(String(order._id)) || null
-  })).map(o => ({ ...o, totalFee: o.fee.subtotal - o.fee.discount + o.shipping.fee }));
-  return {data, total};
+  const data = orders
+    .map((order) => ({
+      ...order,
+      shipping: shippingMap.get(String(order._id)) || null,
+    }))
+    .map((o) => {
+      const subtotal = o.fee?.subtotal ?? o.itemsPrice ?? 0;
+      const discount = o.fee?.discount ?? 0;
+      const shipFee = o.shipping?.fee ?? o.shippingPrice ?? 0;
+      const computedTotal = subtotal - discount + shipFee;
+      return {
+        ...o,
+        totalFee:
+          typeof o.totalFee === "number" && !Number.isNaN(o.totalFee)
+            ? o.totalFee
+            : (o.totalPrice ?? computedTotal),
+      };
+    });
+  return { data, total };
 }
 
 export const ordersListV3 = async (req, res) => {

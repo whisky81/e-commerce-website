@@ -8,6 +8,37 @@ import Address from "../components/Address";
 import ProductRow from "../components/ProductRow";
 import { formatPrice, formatDate } from "../utils/formats";
 
+const orderDisplayTotal = (o) => {
+  if (!o || typeof o !== "object") return 0;
+  const v = o.totalFee ?? o.totalPrice;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const sub = o.fee?.subtotal ?? o.itemsPrice ?? 0;
+  const disc = o.fee?.discount ?? 0;
+  const ship = o.shipping?.fee ?? o.shippingPrice ?? 0;
+  return sub - disc + ship;
+};
+const orderSubtotal = (o) => o?.fee?.subtotal ?? o?.itemsPrice ?? 0;
+const orderShippingFee = (o) => o?.shipping?.fee ?? o?.shippingPrice ?? 0;
+const orderDiscountAmt = (o) => {
+  if (!o) return 0;
+  if (o.fee?.discount != null && o.fee.discount > 0) return o.fee.discount;
+  return o.welcomeDiscountAmount ?? 0;
+};
+const orderHasDiscount = (o) => orderDiscountAmt(o) > 0;
+const payMethodKey = (o) => o.payment?.method ?? o.paymentMethod;
+const isOrderPaid = (o) => (o.payment?.status === "paid") || Boolean(o.isPaid);
+const orderCodeLabel = (o) =>
+  o?.code ? `#${o.code}` : o?._id ? `#${String(o._id).slice(-8)}` : "#—";
+
+const paymentMethodLabel = (method) =>
+({
+  cod: "Thanh toán khi nhận hàng",
+  bank: "Thẻ quốc tế (Stripe)",
+  stripe: "Thẻ quốc tế (Stripe)",
+  momo: "Ví MoMo",
+  vnpay: "VNPay",
+}[method] || method || "—");
+
 const Orders = () => {
   const { backendUrl, isAuthenticated, navigate } = useShopContext();
   const [orders,        setOrders]        = useState([]);
@@ -27,7 +58,9 @@ const Orders = () => {
       const response = await axios.get(backendUrl + "/api/orders/me", { withCredentials: true });
       if (response.status === 401) { navigate("/login"); return; }
       if (!response.data.success) throw new Error(response.data.message);
-      setOrders(response.data.data);
+      const raw = response.data.data;
+      const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+      setOrders(list.filter(Boolean));
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Không thể tải đơn hàng");
     } finally {
@@ -82,12 +115,7 @@ const Orders = () => {
     cancelled: { color: "bg-red-500",    text: "Đã hủy",        badge: "bg-red-100 text-red-800" },
   }[status] || { color: "bg-gray-500", text: status, badge: "bg-gray-100 text-gray-800" });
 
-  const getPaymentMethodText = (method) => ({
-    cod:    "Thanh toán khi nhận hàng",
-    stripe: "Thẻ quốc tế (Stripe)",
-    momo:   "Ví MoMo",
-    vnpay:  "VNPay",
-  }[method] || method);
+  const getPaymentMethodText = (order) => paymentMethodLabel(payMethodKey(order));
 
   if (loading) {
     return (
@@ -116,7 +144,8 @@ const Orders = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map(order => {
+          {orders.map((order) => {
+            if (!order?._id) return null;
             const statusInfo = getStatusInfo(order.status);
             return (
               <div key={order._id} className="border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition bg-white">
@@ -126,19 +155,19 @@ const Orders = () => {
                   onClick={() => setExpandedOrder(expandedOrder === order._id ? null : order._id)}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <span className="text-xs text-gray-500 font-mono">#{order._id.slice(-8)}</span>
+                    <span className="text-xs text-gray-500 font-mono">{orderCodeLabel(order)}</span>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusInfo.badge}`}>
                       {statusInfo.text}
                     </span>
-                    {order.welcomeDiscount && (
+                    {(order.welcomeDiscount || orderHasDiscount(order)) && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
-                        <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg> Ưu đãi 20%
+                        <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg> Ưu đãi
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="text-gray-500">{formatDate(order.createdAt)}</span>
-                    <span className="font-bold text-blue-600">{formatPrice(order.totalPrice)}</span>
+                    <span className="font-bold text-blue-600">{formatPrice(orderDisplayTotal(order))}</span>
                     <svg
                       className={`w-5 h-5 transform transition-transform text-gray-400 ${expandedOrder === order._id ? "rotate-180" : ""}`}
                       fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +182,7 @@ const Orders = () => {
                     {/* Items */}
                     <h3 className="font-semibold text-lg mb-3">Sản phẩm đã đặt</h3>
                     <div className="space-y-3">
-                      {order.items.map((item, idx) => (
+                      {(order.items ?? []).map((item, idx) => (
                         <ProductRow
                           key={idx}
                           image={item.image?.url || item.image} name={item.name}
@@ -163,10 +192,10 @@ const Orders = () => {
                     </div>
 
                     {/* Welcome discount info */}
-                    {order.welcomeDiscount && (
+                    {orderHasDiscount(order) && (
                       <div className="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm">
                         <p className="text-emerald-700 font-medium">
-                          <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg> Ưu đãi chào mừng 20% đã được áp dụng – Tiết kiệm: {formatPrice(order.welcomeDiscountAmount)}
+                          <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg> Giảm giá / ưu đãi đã áp dụng – Tiết kiệm: {formatPrice(orderDiscountAmt(order))}
                         </p>
                       </div>
                     )}
@@ -176,7 +205,11 @@ const Orders = () => {
                       {/* Shipping */}
                       <div>
                         <h3 className="font-semibold text-lg mb-3">Địa chỉ giao hàng</h3>
-                        <Address address={order.shippingAddress} isSelected={false} readOnly={true} />
+                        {order.shippingAddress ? (
+                          <Address address={order.shippingAddress} isSelected={false} readOnly={true} />
+                        ) : (
+                          <p className="text-sm text-gray-500">Không có dữ liệu địa chỉ.</p>
+                        )}
                       </div>
 
                       {/* Payment */}
@@ -185,32 +218,32 @@ const Orders = () => {
                         <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-500">Phương thức:</span>
-                            <span className="font-medium">{getPaymentMethodText(order.paymentMethod)}</span>
+                            <span className="font-medium">{getPaymentMethodText(order)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Thanh toán:</span>
-                            <span className={`font-semibold ${order.isPaid ? "text-green-600" : "text-red-600"}`}>
-                              {order.isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                            <span className={`font-semibold ${isOrderPaid(order) ? "text-green-600" : "text-red-600"}`}>
+                              {isOrderPaid(order) ? "Đã thanh toán" : "Chưa thanh toán"}
                             </span>
                           </div>
                           <hr className="border-gray-200" />
                           <div className="flex justify-between">
                             <span className="text-gray-500">Tạm tính:</span>
-                            <span>{formatPrice(order.itemsPrice)}</span>
+                            <span>{formatPrice(orderSubtotal(order))}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-500">Phí vận chuyển:</span>
-                            <span>{formatPrice(order.shippingPrice)}</span>
+                            <span>{formatPrice(orderShippingFee(order))}</span>
                           </div>
-                          {order.welcomeDiscount && (
+                          {orderHasDiscount(order) && (
                             <div className="flex justify-between text-emerald-600">
-                              <span>Ưu đãi chào mừng:</span>
-                              <span>-{formatPrice(order.welcomeDiscountAmount)}</span>
+                              <span>Giảm giá / ưu đãi:</span>
+                              <span>-{formatPrice(orderDiscountAmt(order))}</span>
                             </div>
                           )}
                           <div className="flex justify-between font-bold text-base border-t pt-2">
                             <span>Tổng cộng:</span>
-                            <span className="text-blue-600">{formatPrice(order.totalPrice)}</span>
+                            <span className="text-blue-600">{formatPrice(orderDisplayTotal(order))}</span>
                           </div>
                         </div>
                       </div>
@@ -257,7 +290,7 @@ const Orders = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-bold text-lg inline-flex items-center gap-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> Liên hệ hỗ trợ</h3>
-                <p className="text-sm text-gray-500 mt-0.5">Mã đơn: #{supportOrder._id.slice(-8)}</p>
+                <p className="text-sm text-gray-500 mt-0.5">Mã đơn: {orderCodeLabel(supportOrder)}</p>
               </div>
               <button
                 onClick={() => setSupportOrder(null)}

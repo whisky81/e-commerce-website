@@ -5,6 +5,8 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import AddressForm from "../components/AddressForm";
+import { addAddressV3 } from "../api/users";
+import { formatAddressLine, formatDate, formatDeliveryCountdown } from "../utils/formats";
 
 const User = () => {
   const { user, navigate, isAuthenticated, backendUrl } = useShopContext();
@@ -41,11 +43,7 @@ const User = () => {
         if (!response.data.success) throw new Error(response.data.message);
         toast.success("Cập nhật địa chỉ thành công");
       } else {
-        const response = await axios.post(
-          `${backendUrl}/api/users/addresses`,
-          formData,
-          { withCredentials: true }
-        );
+        const response = await addAddressV3(formData);
         if (!response.data.success) throw new Error(response.data.message);
         toast.success("Thêm địa chỉ thành công");
       }
@@ -175,6 +173,33 @@ const User = () => {
               </div>
             </div>
 
+            {user.estimatedDeliveryTime != null && (
+              <div className="mb-6 p-4 rounded-xl border border-indigo-100 bg-indigo-50/80 text-sm text-indigo-900">
+                <p className="font-semibold mb-1">Giao hàng dự kiến (địa chỉ mặc định)</p>
+                {typeof user.estimatedDeliveryTime === "object" &&
+                user.estimatedDeliveryTime !== null &&
+                "leadtime" in user.estimatedDeliveryTime ? (
+                  <>
+                    <p>
+                      Nhận khoảng:{" "}
+                      {formatDate(
+                        new Date(user.estimatedDeliveryTime.leadtime * 1000).toISOString()
+                      )}
+                    </p>
+                    {user.estimatedDeliveryTime.deliveryTimeRemaining && (
+                      <p className="mt-1 text-indigo-800">
+                        {formatDeliveryCountdown(user.estimatedDeliveryTime.deliveryTimeRemaining)}
+                      </p>
+                    )}
+                  </>
+                ) : typeof user.estimatedDeliveryTime === "string" ? (
+                  <p>Nhận khoảng: {formatDate(user.estimatedDeliveryTime)}</p>
+                ) : (
+                  <p className="text-gray-600">Đang cập nhật thời gian giao…</p>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
                 <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -246,9 +271,7 @@ const User = () => {
                           d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <p className="text-sm">
-                        {addr.street}, {addr.ward}, {addr.province}
-                      </p>
+                      <p className="text-sm">{formatAddressLine(addr)}</p>
                     </div>
 
                     {addr.lat && addr.lng && (
@@ -300,7 +323,8 @@ const User = () => {
                 </button>
               </div>
               <div className="p-6">
-                <AddressForm 
+                <AddressForm
+                  key={editingAddress ? editingAddress._id : 'new-address'}
                   initialData={editingAddress}
                   onSubmit={saveAddress}
                   onCancel={closeAddressModal}

@@ -46,7 +46,7 @@ const Cart = () => {
     }
     // ✅ Chỉ truyền đúng các item được chọn, không truyền toàn bộ cart
     const selectedCartItems = cartData.filter(item => selectedItems.has(item.id));
-    navigate("/place-order", { state: { selectedCartItems } });
+    navigate("/place-order", { state: { selectedCartItems, fromCart: true } });
   };
 
   const selectedTotal = cartData

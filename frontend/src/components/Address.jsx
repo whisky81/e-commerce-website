@@ -11,13 +11,14 @@ const Address = ({
 }) => {
     const [showFullInfo, setShowFullInfo] = useState(false);
 
+    if (!address) return null;
+
     const getFullAddress = () => {
-        const parts = [
-            address.street,
-            address.ward,
-            address.province
-        ].filter(Boolean);
-        return parts.join(', ');
+        const w = address.wardName ?? address.ward
+        const d = address.districtName ?? address.district
+        const p = address.provinceName ?? address.province
+        const parts = [address.street, w, d, p].filter(Boolean)
+        return parts.join(', ')
     };
 
     return (
@@ -65,7 +66,7 @@ const Address = ({
                     <p className="text-gray-600">
                         {showFullInfo 
                             ? getFullAddress()
-                            : `${address.street}, ${address.ward}`
+                            : `${address.street}, ${address.wardName ?? address.ward ?? ''}`
                         }
                     </p>
                 </div>
@@ -82,8 +83,9 @@ const Address = ({
             {/* Full info */}
             {showFullInfo && (
                 <div className="bg-gray-50 p-3 rounded-md text-sm mb-3 space-y-1">
-                    <p><span className="font-medium">Tỉnh/Thành phố:</span> {address.province}</p>
-                    <p><span className="font-medium">Phường/Xã:</span> {address.ward}</p>
+                    <p><span className="font-medium">Tỉnh/Thành phố:</span> {address.provinceName ?? address.province}</p>
+                    <p><span className="font-medium">Quận/Huyện:</span> {address.districtName ?? address.district}</p>
+                    <p><span className="font-medium">Phường/Xã:</span> {address.wardName ?? address.ward}</p>
                     <p><span className="font-medium">Đường/Thôn:</span> {address.street}</p>
                 </div>
             )}
