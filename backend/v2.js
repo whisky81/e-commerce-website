@@ -27,7 +27,7 @@ import orderRoutesV3 from "./routes/v3/orderRoutes.js";
 import adminRoutesV3 from "./routes/v3/adminRoutes.js";
 
 const app  = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5001;
 
 connectDB();
 connectCloudinary();
