@@ -165,10 +165,10 @@ const Cart = () => {
                   {selectedTotal.toLocaleString("vi-VN")} ₫
                 </span>
               </div>
-              <div className="flex justify-between text-slate-700">
+              {/* <div className="flex justify-between text-slate-700">
                 <span>Vận chuyển:</span>
                 <span className="font-semibold">20.000 ₫</span>
-              </div>
+              </div> */}
             </div>
             <div className="flex justify-between mb-6 text-lg">
               <span className="font-bold text-slate-900">Tổng cộng:</span>

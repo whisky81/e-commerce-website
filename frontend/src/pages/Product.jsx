@@ -176,10 +176,6 @@ const Product = () => {
               <span className="font-semibold text-gray-700 w-24">Đã bán:</span>
               <span className="text-gray-600">{(productData.soldCount ?? 0).toLocaleString("vi-VN")}</span>
             </p>
-            <p className="flex items-center gap-2">
-              <span className="font-semibold text-gray-700 w-24">Vận chuyển:</span>
-              <span className="text-emerald-600">Miễn phí toàn quốc</span>
-            </p>
           </div>
         </div>
       </div>

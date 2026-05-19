@@ -83,11 +83,6 @@ const CartTotal = ({ items, preview }) => {
       <div className="text-2xl">
         <Title text1={'Đơn hàng'} text2={'Thanh toán'} />
       </div>
-      {showPreview && (
-        <p className="text-xs text-indigo-600 mt-2">
-          Tam tính, phí ship và tổng theo GHN và địa chỉ đã chọn (API xem trước đơn)
-        </p>
-      )}
       <div className="flex flex-col gap-2 mt-2 text-sm">
         <div className="flex justify-between">
           <p className="text-gray-600">Tạm tính</p>
