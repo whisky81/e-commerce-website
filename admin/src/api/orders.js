@@ -3,7 +3,7 @@ import api from "./client";
 /** @param {{ page?: number, limit?: number }} [params] */
 export const fetchOrders = (params = {}) =>
   api.get("/api/v3/admin/orders", {
-    params: { page: params.page ?? 1, limit: params.limit ?? 12 },
+    params: { page: params.page ?? 1, limit: params.limit ?? 12, search: params.search },
   });
 
 export const updateOrderStatus = (ids, status) =>

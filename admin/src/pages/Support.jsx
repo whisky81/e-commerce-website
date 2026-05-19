@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
@@ -57,7 +58,15 @@ const Support = () => {
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
                                         <h3 className="font-semibold text-slate-800">{msg.user?.name} <span className="text-slate-500 font-normal">({msg.user?.email})</span></h3>
-                                        <p className="text-sm text-slate-500 mt-1">Đơn hàng: <span className="font-medium">{msg.order?.code || 'N/A'}</span></p>
+                                        <p className="text-sm text-slate-500 mt-1">
+                                            Đơn hàng: {msg.order?.code ? (
+                                                <Link to={`/orders?search=${msg.order.code}`} className="font-medium text-blue-600 hover:underline" title="Xem chi tiết đơn hàng">
+                                                    {msg.order.code}
+                                                </Link>
+                                            ) : (
+                                                <span className="font-medium text-slate-400">N/A</span>
+                                            )}
+                                        </p>
                                         <p className="text-xs text-slate-400 mt-1">{new Date(msg.createdAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</p>
                                     </div>
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${msg.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>

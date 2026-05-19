@@ -406,6 +406,13 @@ export const contactSupport = async (req, res) => {
   ApiResponse.success("Support request submitted! We will respond as soon as possible.").send(res);
 };
 
+export const userSupportMessages = async (req, res) => {
+  const messages = await SupportMessage.find({ user: req.user._id })
+    .sort({ createdAt: -1 })
+    .lean();
+  ApiResponse.success("Success", messages).send(res);
+};
+
 // ─── List Orders (admin) ──────────────────────────────────────────────────────
 
 export const ordersList = async (req, res) => {
@@ -474,7 +481,18 @@ export const ordersListV3 = async (req, res) => {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
   const skip = (page - 1) * limit;
 
-  const { data, total } = await ordersData(skip, limit, {});
+  const filter = {};
+  if (req.query.search) {
+    const search = req.query.search.trim();
+    if (search.length === 24) {
+      // Assuming it could be a valid MongoDB ObjectId
+      filter.$or = [{ code: search }, { _id: search }];
+    } else {
+      filter.code = search;
+    }
+  }
+
+  const { data, total } = await ordersData(skip, limit, filter);
 
   ApiResponse.paginated(data, {
     page,

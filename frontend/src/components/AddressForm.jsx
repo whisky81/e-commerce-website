@@ -45,6 +45,8 @@ function AddressForm({ onSubmit, onCancel, initialData = null }) {
   const [districtId, setDistrictId] = useState('')
   const [wardCode, setWardCode] = useState('')
 
+  const [lastDropdownChange, setLastDropdownChange] = useState(0)
+
   const [loadingProvinces, setLoadingProvinces] = useState(false)
   const [loadingDistricts, setLoadingDistricts] = useState(false)
   const [loadingWards, setLoadingWards] = useState(false)
@@ -158,6 +160,36 @@ function AddressForm({ onSubmit, onCancel, initialData = null }) {
       cancelled = true
     }
   }, [districtId])
+
+  // Map synchronization when dropdowns change
+  useEffect(() => {
+    if (!lastDropdownChange || !provinceId) return
+
+    const p = provinces.find((x) => x.id === Number(provinceId))?.name
+    if (!p) return
+    const d = districts.find((x) => x.id === Number(districtId))?.name
+    const w = wards.find((x) => String(x.id) === String(wardCode))?.name
+
+    const parts = [w, d, p, 'Việt Nam'].filter(Boolean)
+    const query = parts.join(', ')
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`)
+        const data = await res.json()
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat)
+          const lon = parseFloat(data[0].lon)
+          setMapPos([lat, lon])
+          setForm(f => ({ ...f, lat, lng: lon, placeId: data[0].place_id?.toString() }))
+        }
+      } catch (err) {
+        console.error("Geocoding failed:", err)
+      }
+    }, 800)
+
+    return () => clearTimeout(timer)
+  }, [lastDropdownChange, provinceId, districtId, wardCode, provinces, districts, wards])
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
 
@@ -285,6 +317,7 @@ function AddressForm({ onSubmit, onCancel, initialData = null }) {
                 setDistrictId('')
                 setWardCode('')
                 setWards([])
+                setLastDropdownChange(Date.now())
               }}
               disabled={loadingProvinces}
               className={selClass('provinceId')}
@@ -305,6 +338,7 @@ function AddressForm({ onSubmit, onCancel, initialData = null }) {
                 const v = e.target.value
                 setDistrictId(v === '' ? '' : Number(v))
                 setWardCode('')
+                setLastDropdownChange(Date.now())
               }}
               disabled={!provinceId || loadingDistricts}
               className={selClass('districtId')}
@@ -321,7 +355,10 @@ function AddressForm({ onSubmit, onCancel, initialData = null }) {
           <Field label="Phường/Xã (GHN)" required error={errors.wardCode}>
             <select
               value={wardCode}
-              onChange={(e) => setWardCode(e.target.value)}
+              onChange={(e) => {
+                setWardCode(e.target.value)
+                setLastDropdownChange(Date.now())
+              }}
               disabled={!districtId || loadingWards}
               className={selClass('wardCode')}
             >

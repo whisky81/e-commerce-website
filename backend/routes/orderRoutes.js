@@ -13,6 +13,7 @@ import {
   verifyVNPayReturn,
   cancelOrder,
   contactSupport,
+  userSupportMessages,
 } from "../controllers/order.controller.js";
 import catchAsync from "../middleware/catchAsync.js";
 
@@ -28,6 +29,7 @@ orderRoutes.post("/stripe", protect, catchAsync(placeOrderStripe));
 orderRoutes.post("/momo",   protect, catchAsync(placeOrderMoMo));
 orderRoutes.post("/vnpay",  protect, catchAsync(placeOrderVNPay));
 orderRoutes.get ("/me",     protect, catchAsync(userOrders)); // TODO
+orderRoutes.get ("/support/me", protect, catchAsync(userSupportMessages));
 
 // ─── Payment verification ─────────────────────────────────────────────────────
 // verify-stripe: user phải đăng nhập để verify

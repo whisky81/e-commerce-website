@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-toastify'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   fetchOrders,
   updateOrderStatus,
@@ -17,6 +17,7 @@ import {
   CreditCard,
   Banknote,
   Calendar,
+  Search,
 } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 
@@ -77,13 +78,25 @@ const Orders = () => {
   const [expandedId, setExpandedId] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
 
+  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParam = searchParams.get('search') || ''
+  const [searchInput, setSearchInput] = useState(searchParam)
+
   const fetchAllOrders = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetchOrders({ page, limit: PAGE_SIZE })
+      const response = await fetchOrders({ page, limit: PAGE_SIZE, search: searchParam })
       if (response.data.success) {
-        setOrders(response.data.data ?? [])
+        const fetchedOrders = response.data.data ?? []
+        setOrders(fetchedOrders)
         setMeta(response.data.meta ?? null)
+
+        // Automatically expand if search result yields exactly 1 order
+        if (searchParam && fetchedOrders.length === 1) {
+          setExpandedId(fetchedOrders[0]._id)
+        } else if (!searchParam && expandedId && !fetchedOrders.find(o => o._id === expandedId)) {
+          setExpandedId(null)
+        }
       } else {
         throw new Error(response.data.message)
       }
@@ -93,11 +106,15 @@ const Orders = () => {
     } finally {
       setLoading(false)
     }
-  }, [page])
+  }, [page, searchParam])
 
   useEffect(() => {
     fetchAllOrders()
   }, [fetchAllOrders])
+
+  useEffect(() => {
+    setSearchInput(searchParam)
+  }, [searchParam])
 
   useEffect(() => {
     setSelectedIds([])
@@ -184,7 +201,7 @@ const Orders = () => {
   const hasPrev = meta?.hasPrev ?? page > 1
   const hasNext = meta?.hasNext ?? false
 
-  if (loading) {
+  if (loading && orders.length === 0) {
     return (
       <div className="p-8 text-center text-slate-500 flex flex-col items-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
@@ -203,6 +220,28 @@ const Orders = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault()
+              setPage(1)
+              if (searchInput.trim()) {
+                setSearchParams({ search: searchInput.trim() })
+              } else {
+                setSearchParams({})
+              }
+            }}
+            className="flex items-center bg-white border border-slate-300 rounded-lg px-3 py-2 mr-2"
+          >
+            <Search size={16} className="text-slate-400 mr-2" />
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm mã đơn hoặc ID..." 
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="text-sm outline-none bg-transparent w-48"
+            />
+          </form>
+
           <button
             type="button"
             onClick={handleBulkShipping}

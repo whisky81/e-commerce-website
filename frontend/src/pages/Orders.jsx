@@ -46,6 +46,9 @@ const Orders = () => {
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [cancelling,    setCancelling]    = useState(null);
 
+  // ─── Support history state ────────────────────────────────────────────────
+  const [supportHistory, setSupportHistory] = useState([]);
+
   // ─── Support modal state ───────────────────────────────────────────────────
   const [supportOrder,   setSupportOrder]   = useState(null);
   const [supportMsg,     setSupportMsg]     = useState("");
@@ -61,6 +64,12 @@ const Orders = () => {
       const raw = response.data.data;
       const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
       setOrders(list.filter(Boolean));
+
+      // Fetch support history
+      const supportRes = await axios.get(backendUrl + "/api/orders/support/me", { withCredentials: true });
+      if (supportRes.data.success) {
+        setSupportHistory(supportRes.data.data || []);
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Không thể tải đơn hàng");
     } finally {
@@ -99,6 +108,7 @@ const Orders = () => {
         toast.success(res.data.message);
         setSupportOrder(null);
         setSupportMsg("");
+        fetchOrdersData(); // Refresh to get the new support message
       } else throw new Error(res.data.message);
     } catch (e) {
       toast.error(e.response?.data?.message || e.message);
@@ -275,6 +285,32 @@ const Orders = () => {
                         <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> Liên hệ hỗ trợ
                       </button>
                     </div>
+
+                    {/* Support History for this order */}
+                    {supportHistory.filter(msg => msg.order === order._id).length > 0 && (
+                      <div className="mt-6 border-t pt-4">
+                        <h3 className="font-semibold text-lg mb-3">Lịch sử hỗ trợ</h3>
+                        <div className="space-y-4">
+                          {supportHistory.filter(msg => msg.order === order._id).map(msg => (
+                            <div key={msg._id} className="bg-gray-50 rounded-xl p-4 text-sm">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${msg.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                  {msg.status === 'resolved' ? 'Đã phản hồi' : 'Chờ xử lý'}
+                                </span>
+                                <span className="text-gray-400 text-xs">{new Date(msg.createdAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                              </div>
+                              <p className="text-gray-700 mb-3"><span className="font-semibold">Bạn:</span> {msg.message}</p>
+                              {msg.reply && (
+                                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-blue-800">
+                                  <p className="font-semibold mb-1">Admin phản hồi:</p>
+                                  <p className="whitespace-pre-wrap">{msg.reply}</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
