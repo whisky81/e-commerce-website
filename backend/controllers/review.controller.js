@@ -1,3 +1,4 @@
+import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import Review from "../models/Review.js";
 import { v2 as cloudinary } from "cloudinary";
@@ -14,6 +15,16 @@ export const createReview = async (req, res) => {
         rating,
         comment
     } = req.body;
+
+    const hasPurchased = await Order.exists({
+        user: userId,
+        "items.product": productId,
+        status: "delivered"
+    });
+
+    if (!hasPurchased) {
+        throw new ForbiddenError("Bạn chỉ có thể đánh giá sản phẩm đã mua và nhận hàng thành công.");
+    }
 
     // service + repository
     if (!productId || !rating) {

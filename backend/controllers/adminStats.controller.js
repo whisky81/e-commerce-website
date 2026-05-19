@@ -67,12 +67,12 @@ export const adminStats = async (req, res) => {
 
             Order.aggregate([
                 { $match: { status: { $ne: "cancelled" }, ...prevMatch } },
-                { $group: { _id: null, total: { $sum: "$totalPrice" } } }
+                { $group: { _id: null, total: { $sum: { $ifNull: ["$fee.total", "$totalPrice"] } } } }
             ]),
 
             Order.aggregate([
-                { $match: { isPaid: true, ...prevMatch } },
-                { $group: { _id: null, total: { $sum: "$totalPrice" } } }
+                { $match: { $or: [{ isPaid: true }, { "payment.status": "paid" }], ...prevMatch } },
+                { $group: { _id: null, total: { $sum: { $ifNull: ["$fee.total", "$totalPrice"] } } } }
             ]),
 
             Order.aggregate([
@@ -101,12 +101,12 @@ export const adminStats = async (req, res) => {
 
         Order.aggregate([
             { $match: { status: { $ne: "cancelled" }, ...currentMatch } },
-            { $group: { _id: null, total: { $sum: "$totalPrice" } } }
+            { $group: { _id: null, total: { $sum: { $ifNull: ["$fee.total", "$totalPrice"] } } } }
         ]),
 
         Order.aggregate([
-            { $match: { isPaid: true, ...currentMatch } },
-            { $group: { _id: null, total: { $sum: "$totalPrice" } } }
+            { $match: { $or: [{ isPaid: true }, { "payment.status": "paid" }], ...currentMatch } },
+            { $group: { _id: null, total: { $sum: { $ifNull: ["$fee.total", "$totalPrice"] } } } }
         ]),
 
         Order.aggregate([

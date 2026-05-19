@@ -5,6 +5,7 @@ import Product from "../models/Product.js";
 import User from "../models/User.js";
 import Subscriber from "../models/Subscriber.js";
 import mongoose from "mongoose";
+import SupportMessage from "../models/SupportMessage.js";
 import { createMoMoPayment } from "../services/momoService.js";
 import { createVNPayUrl, verifyVNPayReturn as verifyVNPayFn } from "../services/vnpayService.js";
 import { sendOrderConfirmation } from "../services/emailService.js";
@@ -396,7 +397,12 @@ export const contactSupport = async (req, res) => {
   const order = await Order.findOne({ _id: orderId, user: req.user._id });
   if (!order) throw new NotFoundError("Order");
 
-  // TODO: persist support message to SupportMessage collection
+  await SupportMessage.create({
+    order: order._id,
+    user: req.user._id,
+    message: message.trim()
+  });
+
   ApiResponse.success("Support request submitted! We will respond as soon as possible.").send(res);
 };
 

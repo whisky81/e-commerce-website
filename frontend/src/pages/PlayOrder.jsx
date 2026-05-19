@@ -118,10 +118,25 @@ const PlaceOrder = () => {
           </svg>
         ),
       },
+      {
+        key: 'momo',
+        label: 'Ví MoMo (Sắp ra mắt)',
+        icon: <div className="text-pink-600 font-bold text-[10px] bg-pink-100 px-2 py-0.5 rounded border border-pink-200">MoMo</div>,
+        disabled: true
+      },
+      {
+        key: 'vnpay',
+        label: 'VNPAY (Sắp ra mắt)',
+        icon: <div className="text-blue-700 font-bold text-[10px] bg-blue-100 px-2 py-0.5 rounded border border-blue-200">VNPAY</div>,
+        disabled: true
+      },
     ]
     const allow = preview?.availablePaymentMethods
     if (!allow?.length) return all
-    return all.filter((o) => allow.includes(o.key))
+    return all.map(o => ({
+      ...o,
+      disabled: o.disabled || (o.key !== 'momo' && o.key !== 'vnpay' && !allow.includes(o.key))
+    }))
   }, [preview])
 
   const handleAddAddress = async (formData) => {
@@ -168,7 +183,7 @@ const PlaceOrder = () => {
           return
         }
         toast.success(response.data.message ?? 'Đặt hàng thành công')
-        queryClient.setQueryData(['cart'], {})
+        await queryClient.invalidateQueries({ queryKey: ['cart'] })
         navigate('/orders')
       } else if (method === 'stripe') {
         const response = await placeOrderStripe(body)
@@ -304,19 +319,20 @@ const PlaceOrder = () => {
               Theo API chỉ COD và Stripe được hỗ trợ trong luồng V3. Sau COD/Stripe, đơn vẫn chờ cửa hàng xử lý giao GHN (api_v3_docs).
             </p>
             <div className="flex flex-col gap-3 mt-3">
-              {paymentOptions.map(({ key, label, icon }) => (
+              {paymentOptions.map(({ key, label, icon, disabled }) => (
                 <div
                   key={key}
-                  onClick={() => setMethod(key)}
-                  className={`flex items-center gap-4 border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                  onClick={() => !disabled && setMethod(key)}
+                  className={`flex items-center gap-4 border-2 rounded-xl p-4 transition-all ${
+                    disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' :
                     method === key
-                      ? 'border-indigo-500 bg-indigo-50'
-                      : 'border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/30'
+                      ? 'border-indigo-500 bg-indigo-50 cursor-pointer'
+                      : 'border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer'
                   }`}
                   role="button"
-                  tabIndex={0}
+                  tabIndex={disabled ? -1 : 0}
                   onKeyDown={(ev) =>
-                    ev.key === 'Enter' && setMethod(key)
+                    !disabled && ev.key === 'Enter' && setMethod(key)
                   }
                 >
                   <div

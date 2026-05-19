@@ -35,6 +35,11 @@ const Collection = () => {
     return () => clearTimeout(t)
   }, [search])
 
+  // ─── Scroll to top on page change ───────────────────────────────────────────
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [page])
+
   // ─── FIX: reset page when filters change (use ref to avoid infinite loop) ──
   const prevKey = useRef('')
   const filterKey = [category.join(','), brands.join(','), sortType, debouncedSearch, String(showSearch)].join('|')

@@ -15,6 +15,7 @@ import Setting from './pages/Setting'
 import Marketing from './pages/Marketing'
 import Users from './pages/Users'
 import Reviews from './pages/Reviews'
+import Support from './pages/Support'
 import { useAuth } from './context/AuthContext'
 
 export const backendUrl = import.meta.env.VITE_BACKEND_URL
@@ -72,6 +73,7 @@ const App = () => {
             <Route path="/orders"     element={<Orders token={true} />} />
             <Route path="/users"      element={<Users />} />
             <Route path="/reviews"    element={<Reviews />} />
+            <Route path="/support"    element={<Support />} />
             <Route path="/stats"      element={<Stats />} />
             <Route path="/marketing"  element={<Marketing />} />
             <Route path="/settings"   element={<Setting />} />

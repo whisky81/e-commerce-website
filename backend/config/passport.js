@@ -25,25 +25,25 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
       {
-        clientID:     process.env.GOOGLE_CLIENT_ID,
+        clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL:  `${process.env.BACKEND_URL || "http://localhost:5000"}/api/auth/google/callback`,
+        callbackURL: `${process.env.BACKEND_URL || "http://localhost:5001"}/api/auth/google/callback`,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
           let user = await User.findOne({ email: profile.emails[0].value });
           if (!user) {
             user = await User.create({
-              name:            profile.displayName,
-              email:           profile.emails[0].value,
-              password:        `google_${profile.id}_${Math.random().toString(36)}`,
+              name: profile.displayName,
+              email: profile.emails[0].value,
+              password: `google_${profile.id}_${Math.random().toString(36)}`,
               isEmailVerified: true,
-              avatar:          profile.photos?.[0]?.value || null,
-              role:            "user",
+              avatar: profile.photos?.[0]?.value ? { url: profile.photos[0].value, publicId: "google" } : null,
+              role: "user",
             });
-          } else if (!user.avatar && profile.photos?.[0]?.value) {
+          } else if (!user.avatar?.url && profile.photos?.[0]?.value) {
             // Cập nhật avatar nếu chưa có
-            await User.findByIdAndUpdate(user._id, { avatar: profile.photos[0].value });
+            await User.findByIdAndUpdate(user._id, { avatar: { url: profile.photos[0].value, publicId: "google" } });
           }
           done(null, user);
         } catch (e) {
@@ -59,9 +59,9 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
   passport.use(
     new FacebookStrategy(
       {
-        clientID:     process.env.FACEBOOK_APP_ID,
+        clientID: process.env.FACEBOOK_APP_ID,
         clientSecret: process.env.FACEBOOK_APP_SECRET,
-        callbackURL:  `${process.env.BACKEND_URL || "http://localhost:5000"}/api/auth/facebook/callback`,
+        callbackURL: `${process.env.BACKEND_URL || "http://localhost:5001"}/api/auth/facebook/callback`,
         profileFields: ["id", "emails", "name", "picture.type(large)"],
       },
       async (accessToken, refreshToken, profile, done) => {
@@ -71,15 +71,15 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
           let user = await User.findOne({ email });
           if (!user) {
             user = await User.create({
-              name:            `${profile.name?.givenName || ""} ${profile.name?.familyName || ""}`.trim() || "Facebook User",
+              name: `${profile.name?.givenName || ""} ${profile.name?.familyName || ""}`.trim() || "Facebook User",
               email,
-              password:        `facebook_${profile.id}_${Math.random().toString(36)}`,
+              password: `facebook_${profile.id}_${Math.random().toString(36)}`,
               isEmailVerified: true,
-              avatar,
-              role:            "user",
+              avatar: avatar ? { url: avatar, publicId: "facebook" } : null,
+              role: "user",
             });
-          } else if (!user.avatar && avatar) {
-            await User.findByIdAndUpdate(user._id, { avatar });
+          } else if (!user.avatar?.url && avatar) {
+            await User.findByIdAndUpdate(user._id, { avatar: { url: avatar, publicId: "facebook" } });
           }
           done(null, user);
         } catch (e) {

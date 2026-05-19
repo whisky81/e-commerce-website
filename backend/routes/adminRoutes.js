@@ -11,6 +11,7 @@ import { bulkDeleteReviews, getReviewsAdmin, toggleReviewHidden } from "../contr
 import upload from "../middleware/multer.js";
 import { adminStats } from "../controllers/adminStats.controller.js";
 import { bulkDeactivateUsers, getUsersAdmin, toggleUserActive } from "../controllers/admin/user.js"
+import { getSupportMessages, replyToSupportMessage } from "../controllers/admin/support.js";
 import Subscriber from "../models/Subscriber.js";
 import ApiResponse from "../utils/ApiResponse.js";
 
@@ -35,6 +36,10 @@ adminRoutes.delete("/reviews", catchAsync(bulkDeleteReviews));
 adminRoutes.get("/users", catchAsync(getUsersAdmin));
 adminRoutes.patch("/users/:id/toggle-active", catchAsync(toggleUserActive));
 adminRoutes.post("/users/bulk-deactivate", catchAsync(bulkDeactivateUsers));
+
+// support
+adminRoutes.get("/support", catchAsync(getSupportMessages));
+adminRoutes.patch("/support/:id/reply", catchAsync(replyToSupportMessage));
 
 // subscriber 
 adminRoutes.get("/subscribers", catchAsync(async (req, res) => {

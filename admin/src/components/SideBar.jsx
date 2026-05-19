@@ -1,7 +1,7 @@
 // admin/src/components/SideBar.jsx
 import React from 'react'
 import { NavLink } from "react-router-dom"
-import { LayoutDashboard, PlusCircle, Package, ReceiptText, BarChart3, Megaphone, Settings, Users, Star } from 'lucide-react'
+import { LayoutDashboard, PlusCircle, Package, ReceiptText, BarChart3, Megaphone, Settings, Users, Star, MessageSquareText } from 'lucide-react'
 
 const navItems = [
   { to: "/",          label: "Tổng quan",       icon: <LayoutDashboard size={20} /> },
@@ -10,6 +10,7 @@ const navItems = [
   { to: "/orders",    label: "Đơn hàng",        icon: <ReceiptText size={20} /> },
   { to: "/users",     label: "Người dùng",      icon: <Users size={20} /> },
   { to: "/reviews",   label: "Đánh giá",        icon: <Star size={20} /> },
+  { to: "/support",   label: "Hỗ trợ",          icon: <MessageSquareText size={20} /> },
   { to: "/stats",     label: "Thống kê",        icon: <BarChart3 size={20} /> },
   { to: "/marketing", label: "Tiếp thị",        icon: <Megaphone size={20} /> },
   { to: "/settings",  label: "Cài đặt",         icon: <Settings size={20} /> },

@@ -173,7 +173,7 @@ const Cart = () => {
             <div className="flex justify-between mb-6 text-lg">
               <span className="font-bold text-slate-900">Tổng cộng:</span>
               <span className="font-bold text-blue-600">
-                {(selectedTotal + (selectedItems.size > 0 ? 20000 : 0)).toLocaleString("vi-VN")} ₫
+                {selectedTotal.toLocaleString("vi-VN")} ₫
               </span>
             </div>
             <button

@@ -44,7 +44,7 @@ const Verify = () => {
         })
         if (response.data.success) {
           toast.success(response.data.message)
-          queryClient.setQueryData(['cart'], {})
+          await queryClient.invalidateQueries({ queryKey: ['cart'] })
           navigate('/orders')
         } else {
           toast.error(response.data.message || 'Xác nhận thanh toán thất bại')
