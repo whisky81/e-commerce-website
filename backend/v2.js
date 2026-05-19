@@ -25,6 +25,7 @@ import requestLogger from "./middleware/requestLogger.js";
 import addrRoutes from "./routes/v3/addressRoutes.js";
 import orderRoutesV3 from "./routes/v3/orderRoutes.js";
 import adminRoutesV3 from "./routes/v3/adminRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 const app  = express();
 const port = process.env.PORT || 5001;
@@ -60,6 +61,7 @@ app.use("/api/admin",       adminRoutes);
 app.use("/api/setting",     settingRoutes);
 app.use("/api/marketing",   marketingRoutes);
 app.use("/api/subscribers", subscriberRoutes);
+app.use("/api/chat",        chatRoutes);
 
 // api version 3 
 app.use("/api/v3/addresses/3-level", addrRoutes);

@@ -12,6 +12,7 @@ import NavBar from './components/NavBar.jsx'
 import Footer from './components/Footer.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import EmailVerificationBanner from './components/EmailVerificationBanner.jsx'
+import Chatbot from './components/Chatbot.jsx'
 import { ToastContainer } from 'react-toastify';
 import Login from './pages/Login.jsx'
 import Verify from './pages/Verify.jsx'
@@ -60,6 +61,7 @@ const App = () => {
           <Route path='/favorites'              element={<Favorites />} />
         </Routes>
       </main>
+      <Chatbot />
       <Footer />
     </div>
   )
